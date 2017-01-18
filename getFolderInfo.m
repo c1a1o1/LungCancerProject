@@ -19,3 +19,14 @@ for i = 1:numFileSets
 end
 dcmInfoArray = dcmInfoArray(1:(index-1));
 
+%%
+load('sampleImageMetadata.mat')
+%%
+numRows = zeros(1,20);
+numCol = zeros(1,20);
+numSlice = zeros(1,20);
+for i = 1:20
+    numRows(i) = dcmInfoArray{i}{1}.Rows;
+    numCol(i) = dcmInfoArray{i}{1}.Columns;
+    numSlice(i)=size(dcmInfoArray{i},2);
+end
