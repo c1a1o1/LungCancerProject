@@ -25,8 +25,18 @@ load('sampleImageMetadata.mat')
 numRows = zeros(1,20);
 numCol = zeros(1,20);
 numSlice = zeros(1,20);
+sizeZ = zeros(1,20);
+
+pixelSpace1 = zeros(1,20);
+pixelSpace2 = zeros(1,20);
 for i = 1:20
     numRows(i) = dcmInfoArray{i}{1}.Rows;
     numCol(i) = dcmInfoArray{i}{1}.Columns;
     numSlice(i)=size(dcmInfoArray{i},2);
+    sizeZ(i) = abs(dcmInfoArray{i}{1}.SliceLocation-...
+        dcmInfoArray{i}{end}.SliceLocation);
+    
+    pixelSpacing = dcmInfoArray{i}{1}.PixelSpacing;
+    pixelSpace1(i) = pixelSpacing(1);
+    pixelSpace2(i) = pixelSpacing(2);
 end
