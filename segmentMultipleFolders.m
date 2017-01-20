@@ -1,30 +1,12 @@
-dirName = 'data\\sample_images';
+dirName = 'data/sample_images';
 
-numDCMFolds = 0;
-while(numDCMFolds < 20)
-    
-    dcmFolders = dir(dirName);
-    numFolders = size(dcmFolders,1);
-    
-    numDCMFolds = 0;
-    for i = 1:numFolders
-    
-        foldname = dcmFolders(i,1).name;
-        if(length(foldname) < 4)
-           continue; %do not include it 
-        end
-        numDCMFolds = numDCMFolds + 1;
-    end
-    
-    fprintf(strcat('',num2str(numDCMFolds),...
-        ' of 20 DCM folders uploaded. Waiting for all of them...\n'));
-    pause(300);
-end
+dcmFolders = dir(dirName);
+numFolders = size(dcmFolders,1);
 
 for i = 1:numFolders
     
     foldname = dcmFolders(i,1).name;
-    curSampleFolder = strcat(dirName,'\',foldname);
+    curSampleFolder = strcat(dirName,'/',foldname);
     if(length(foldname) < 4)
        continue; %do not include it 
     end
@@ -65,7 +47,7 @@ for i = 1:numFolders
     dcmArraySeg2 = dcmArraySeg(minR:maxR,minC:maxC,minZ:maxZ);
 
     foldName = curSampleFolder(end-31:end);
-    save(strcat('segmentedDCM_',foldName,'.mat'),'dcmArraySeg2');
+    save(strcat('segDCM_',foldName,'.mat'),'dcmArraySeg2');
 
 end
 
