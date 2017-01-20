@@ -15,7 +15,7 @@ slope = 1;
 intercept = 0;
 for i = 1:numFiles
     filename = filesInFolder(i,1).name;
-    filepath = strcat(dirName,'\',filename);
+    filepath = strcat(dirName,'/',filename);
     if(length(filename) < 4)
        continue; %do not include it 
     end
