@@ -9,21 +9,19 @@ tissueRegion = find(dcmArrayHU>=500);
 minR = min(rV); maxR = max(rV);
 minC = min(cV); maxC = max(cV);
 minZ = min(zV); maxZ = max(zV);
+insideBlock = zeros(size(dcmArrayHU));
+insideBlock(minR:maxR,minC:maxC,minZ:maxZ)=1;
 
-dcmArraySeg = dcmArrayHU(minR:maxR,minC:maxC,minZ:maxZ);
-%%
-imtool3D(dcmArraySeg);
+outRegion = find(dcmArrayHU<=-1200);
+outsideBlock = find(insideBlock==0);
+lungRegion = find(dcmArrayHU>-1200 & dcmArrayHU<-700);
+otherTissueRegion = find(dcmArrayHU>=-700);
 
-%%
-
-outRegion = find(dcmArraySeg<=-1200);
-lungRegion = find(dcmArraySeg>-1200 & dcmArraySeg<-700);
-otherTissueRegion = find(dcmArraySeg>=-700);
-
-volBlock = zeros(size(dcmArraySeg));
+volBlock = zeros(size(dcmArrayHU));
 volBlock(outRegion)=1;
 volBlock(lungRegion)=2;
 volBlock(otherTissueRegion)=3;
+volBlock(outsideBlock)=1;
 
 %finds the largest connected component of tissue
 binBlock1 = zeros(size(volBlock));
@@ -47,8 +45,6 @@ for slice = 1:size(binBlock1,3) %gets largest blob in each slice
         ' of ',num2str(size(binBlock1,3)),'\n'));
 end
 
-
-%%
 %the lung will be part of region1. 
 %It will be on the interior of region2
 binBlock3 = zeros(size(volBlock));
@@ -64,8 +60,8 @@ for slice = 1:size(binBlock3,3)
    end
 end
 
-imtool3D(binBlock3)
-%%
+%imtool3D(binBlock3)
+
 %binBlock3 now gives us possible lung pixels
 %   the largest connected component will be correct
 blockData = bwconncomp(binBlock3);
@@ -76,9 +72,9 @@ for i = 1:numBlocks
 end
 [~,largestBlocks]=sort(sizes,'descend');
 finalLungRegion = blockData.PixelIdxList{largestBlocks(1)};
-%%
+
 binBlock4 = zeros(size(binBlock3));
 binBlock4(finalLungRegion)=1;
 
-
+imtool3D(binBlock4);
 
