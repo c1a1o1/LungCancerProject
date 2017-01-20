@@ -1,4 +1,4 @@
-function [ compInds ] = getLargestComponent( dataBlock )
+function [ binBlock ] = getLargestComponentImage( dataBlock )
 %GETLARGESTCOMPONENT Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -10,6 +10,7 @@ for i = 1:numBlocks
 end
 [~,largestBlocks]=sort(sizes,'descend');
 compInds = blockData.PixelIdxList{largestBlocks(1)};
-
+binBlock = zeros(size(dataBlock));
+binBlock(compInds)=1;
 end
 
