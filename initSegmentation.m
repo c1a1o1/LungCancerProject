@@ -2,9 +2,7 @@ curSampleFolder = uigetdir;
 [ dcmData,dcmArray,dcmArrayHU,slope,intercept,dcmInfo ] = ...
     getDCMFolderData( curSampleFolder );
 
-%%
-imtool3D(dcmArrayHU)
-%%
+%imtool3D(dcmArrayHU)
 
 tissueRegion = find(dcmArrayHU>=500);
 [rV,cV,zV] = ind2sub(size(dcmArrayHU),tissueRegion);
@@ -14,6 +12,14 @@ minZ = min(zV); maxZ = max(zV);
 
 dcmArraySeg = dcmArrayHU(minR:maxR,minC:maxC,minZ:maxZ);
 %%imtool3D(dcmArraySeg);
+
+
+%{
+dcmArraySegFilt = zeros(size(dcmArraySeg));
+for i = 1:size(dcmArraySegFilt,3)
+   dcmArraySegFilt(:,:,i)=medfilt2(dcmArraySeg(:,:,i),[5 5],'zeros'); 
+end
+%}
 
 region1 = find(dcmArraySeg>-1200 & dcmArraySeg<-700);
 binBlock = zeros(size(dcmArraySeg));

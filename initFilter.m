@@ -6,6 +6,10 @@ curSampleFolder = uigetdir;
 imtool3D(dcmArrayHU)
 %%
 
+dcmArrayHUFilt = medfilt3(dcmArrayHU,[4 4 2]);
+imtool3D(dcmArrayHUFilt);
+%%
+
 w     = 2;       % bilateral filter half-width
 sigma = [2 0.1]; % bilateral filter standard deviations
 
