@@ -3,12 +3,7 @@ curSampleFolder = uigetdir;
     getDCMFolderData( curSampleFolder );
 
 %imtool3D(dcmArrayHU)
-
-tissueRegion = find(dcmArrayHU>=500);
-[rV,cV,zV] = ind2sub(size(dcmArrayHU),tissueRegion);
-minR = min(rV); maxR = max(rV);
-minC = min(cV); maxC = max(cV);
-minZ = min(zV); maxZ = max(zV);
+[ minR,maxR,minC,maxC,minZ,maxZ ] = getBoundingBox( (dcmArrayHU>=500) );
 insideBlock = zeros(size(dcmArrayHU));
 insideBlock(minR:maxR,minC:maxC,minZ:maxZ)=1;
 
@@ -29,14 +24,7 @@ binBlock2 = zeros(size(volBlock));
 binBlock1(otherTissueRegion)=1;
 for slice = 1:size(binBlock1,3) %gets largest blob in each slice
     curSlice = binBlock1(:,:,slice);
-    blockData = bwconncomp(curSlice);
-    numBlocks = size(blockData.PixelIdxList,2);
-    sizes = zeros(1,numBlocks);
-    for i = 1:numBlocks
-       sizes(i) = size(blockData.PixelIdxList{i},1); 
-    end
-    [~,largestBlocks]=sort(sizes,'descend');
-    tissueRegion1 = blockData.PixelIdxList{largestBlocks(1)};
+    tissueRegion1 = getLargestComponent(curSlice);
     
     newSlice = zeros(size(curSlice));
     newSlice(tissueRegion1)=1;
@@ -64,14 +52,7 @@ end
 
 %binBlock3 now gives us possible lung pixels
 %   the largest connected component will be correct
-blockData = bwconncomp(binBlock3);
-numBlocks = size(blockData.PixelIdxList,2);
-sizes = zeros(1,numBlocks);
-for i = 1:numBlocks
-   sizes(i) = size(blockData.PixelIdxList{i},1); 
-end
-[~,largestBlocks]=sort(sizes,'descend');
-finalLungRegion = blockData.PixelIdxList{largestBlocks(1)};
+finalLungRegion = getLargestComponent(binBlock3);
 
 binBlock4 = zeros(size(binBlock3));
 binBlock4(finalLungRegion)=1;
