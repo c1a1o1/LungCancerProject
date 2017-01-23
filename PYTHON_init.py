@@ -18,6 +18,7 @@ from keras.utils import np_utils
 from keras import backend as K
 
 import scipy.io as sio
+import csv
 from sklearn.cross_validation import train_test_split
 
 batch_size = 128
@@ -39,17 +40,35 @@ kernel_size = (3, 3)
 #print(X_train.shape)
 
 matFiles = []
+trainTestIDs = []
+trainTestLabels = []
 
-trainTestInfo = sio.loadmat("stage1_labelsMAT.mat")
-trainTestIDs = trainTestInfo["names"]
-trainTestLabels = trainTestInfo["labelData"]
+with open('stage1_labels.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        trainTestIDs.append(row['id'])
+        trainTestLabels.append(row['cancer'])
+
+#trainTestInfo = sio.loadmat("stage1_labelsMAT.mat",chars_as_strings=1)
 
 trainIDs,testIDs,trainLabels,testLabels = train_test_split(trainTestIDs,trainTestLabels,test_size=0.2,random_state=42)
 
-print(trainIDs.shape)
-print(testIDs.shape)
-print(trainLabels.shape)
-print(testLabels.shape)
+trainNum = len(trainIDs)
+testNum = len(testIDs)
+
+Xtrain = np.zeros((trainNum,256,256,100))
+Ytrain = np.zeros((trainNum))
+
+Xtest = np.zeros((testNum,256,256,100))
+Ytest = np.zeros((testNum))
+
+for trainInd in range(trainNum):
+    patID = trainIDs[trainInd]
+    patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_"+patID+".mat"
+    curMATcontent = sio.loadmat(patFile)
+    Xtrain[trainInd,:,:,:] = curMATcontent["resizedDCM"]
+    print("Ind:"+str(trainInd))
+
 
 for root, dirs, files in os.walk("/home/zdestefa/data/segFilesResizedAll"):
     for file in files:
