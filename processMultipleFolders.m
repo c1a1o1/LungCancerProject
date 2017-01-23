@@ -1,7 +1,9 @@
-dirName = 'data/sample_images';
+%dirName = 'data/sample_images';
+dirName = 'data/stage1/stage1';
 
 dcmFolders = dir(dirName);
 numFolders = size(dcmFolders,1);
+
 
 for i = 1:numFolders
     
@@ -23,7 +25,7 @@ for i = 1:numFolders
     
     resizedDCM = imresize3d(outputDCM,[],[256 256 100],'nearest','fill');
     
-    newFileName = strcat('segFilesResized/resizedSegDCM_',endPartFileName);
+    newFileName = strcat('segFilesResizedAll/resizedSegDCM_',foldName);
     save(newFileName,'resizedDCM');
     
 
