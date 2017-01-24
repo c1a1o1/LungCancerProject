@@ -20,6 +20,7 @@ from keras import backend as K
 import scipy.io as sio
 import csv
 from sklearn.cross_validation import train_test_split
+from sklearn import tree
 
 batch_size = 128
 nb_classes = 10
@@ -43,38 +44,81 @@ matFiles = []
 trainTestIDs = []
 trainTestLabels = []
 
+validationIDs = []
+
 with open('stage1_labels.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         trainTestIDs.append(row['id'])
         trainTestLabels.append(row['cancer'])
 
-#trainTestInfo = sio.loadmat("stage1_labelsMAT.mat",chars_as_strings=1)
+with open('stage1_sample_submission.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        validationIDs.append(row['id'])
 
-trainIDs,testIDs,trainLabels,testLabels = train_test_split(trainTestIDs,trainTestLabels,test_size=0.2,random_state=42)
 
-trainNum = len(trainIDs)
-testNum = len(testIDs)
+#TODO: CHANGE WHEN DONE TESTING
+numTrainTest = 300
 
-Xtrain = np.zeros((trainNum,256,256,100))
-Ytrain = np.zeros((trainNum))
+numFeats = 256*256*100
+Xdata = np.zeros((numTrainTest,numFeats))
+Ydata = np.zeros(numTrainTest)
 
-Xtest = np.zeros((testNum,256,256,100))
-Ytest = np.zeros((testNum))
+numValid = len(validationIDs)
+Xvalid = np.zeros((numValid,numFeats))
 
-for trainInd in range(trainNum):
-    patID = trainIDs[trainInd]
+for ind in range(numTrainTest):
+    patID = trainTestIDs[ind]
     patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_"+patID+".mat"
     curMATcontent = sio.loadmat(patFile)
-    Xtrain[trainInd,:,:,:] = curMATcontent["resizedDCM"]
-    print("Ind:"+str(trainInd))
+    volData = curMATcontent["resizedDCM"]
+    volDataVector = np.reshape(volData,(numFeats))
+    Xdata[ind, :] = volDataVector
+    Ydata[ind] = int(trainTestLabels[ind])
+    print("Ind:" + str(ind))
+
+for ind in range(numValid):
+    patID = validationIDs[ind]
+    patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_"+patID+".mat"
+    curMATcontent = sio.loadmat(patFile)
+    volData = curMATcontent["resizedDCM"]
+    volDataVector = np.reshape(volData,(numFeats))
+    Xvalid[ind, :] = volDataVector
+    print("Ind2:" + str(ind))
+
+Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_state=42)
+
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(Xtrain,Ytrain)
+
+yHatTrainP = clf.predict_proba(Xtrain)
+yHatTestP = clf.predict_proba(Xtest)
+YvalidP = clf.predict_proba(Xvalid)
+
+yHatTrain = yHatTrainP[:,1]
+yHatTest = yHatTestP[:,1]
+Yvalid = YvalidP[:,1]
+
+#TODO: TRY SVM. HERE IS CODE
+#from sklearn import svm
+#X = [[0, 0], [1, 1]]
+#y = [0, 1]
+#clf = svm.SVC()
+#clf.fit(X, y)
+#clf.predict([[2., 2.]])
 
 
-for root, dirs, files in os.walk("/home/zdestefa/data/segFilesResizedAll"):
-    for file in files:
-        if file.endswith(".mat"):
-            curFile = os.path.join(root, file)
-            #curMATcontents = sio.loadmat(curFile)
-            #matFiles.append(curMATcontents)
-            #print(curFile)
+trainError = sum(abs(yHatTrain-Ytrain))/len(Ytrain)
+testError = sum(abs(yHatTest-Ytest))/len(Ytest)
 
+print(trainError)
+print(testError)
+
+with open('submission.csv', 'w') as csvfile:
+    fieldnames = ['id', 'cancer']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+    writer.writeheader()
+    for ind in range(numValid):
+        writer.writerow({'id': validationIDs[ind], 'cancer': str(Yvalid[ind])})
