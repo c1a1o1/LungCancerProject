@@ -59,7 +59,7 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 
 #TODO: CHANGE WHEN DONE TESTING
-numTrainTest = len(trainTestIDs)
+numTrainTest = 300
 
 numFeats = 256*256*100
 Xdata = np.zeros((numTrainTest,numFeats))
