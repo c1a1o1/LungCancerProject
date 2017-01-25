@@ -1,17 +1,31 @@
+
+load('RES_randomProj.mat');
+%%
+[XX,YY,TT] = perfcurve(Ytest,yHatTestP(:,2),1,...
+    'XCrit','accu','YCrit','fpr');
+[XX2,YY2,TT2] = perfcurve(Ytest,yHatTestP(:,2),1,...
+    'XCrit','fnr','YCrit','fpr');
+
+figure
+hold on
+plot(TT,XX,'k-')
+plot(TT,YY,'r-')
+plot(TT2,XX2,'b-')
+hold off
+legend('Accu vs Thresh','False Pos Vs Thresh','False Neg vs Thresh')
+
+%%
+%based on above, I will say 0.3 is good threshold
+thresh=0.3;
+%submit = int16(YvalidP(:,2)>0.3);
+submit = YvalidP(:,2);
+
 load('stage1_validationIDs.mat');
-
 load('stage1_labelsMAT.mat');
-percentPositive = sum(labelData)/length(labelData);
 
-numValid = length(id);
-submit = zeros(numValid,1);
-for i = 1:numValid
-    submit(i) = (rand<percentPositive);
-end
-
-fileID = fopen('submission.csv','w');
+fileID = fopen('submission3.csv','w');
 fprintf(fileID,'id,cancer\n');
-for i = 1:numValid
+for i = 1:length(id)
     fprintf(fileID,'%s,%d\n',id{i},submit(i));
 end
 fclose(fileID);

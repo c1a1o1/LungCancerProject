@@ -20,7 +20,10 @@ from keras import backend as K
 import scipy.io as sio
 import csv
 from sklearn.cross_validation import train_test_split
+from sklearn import random_projection
 from sklearn import tree
+from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
 
 batch_size = 128
 nb_classes = 10
@@ -59,14 +62,18 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 
 #TODO: CHANGE WHEN DONE TESTING
-numTrainTest = 300
+numTrainTest = len(trainTestIDs);
+#numTrainTest=300
+numValid = len(validationIDs)
+#numValid=10
 
 numFeats = 256*256*100
-Xdata = np.zeros((numTrainTest,numFeats))
+#Xdata = np.zeros((numTrainTest,numFeats))
 Ydata = np.zeros(numTrainTest)
+XdataAll = np.zeros((numTrainTest+numValid,numFeats))
+indexAll = 0
 
-numValid = len(validationIDs)
-Xvalid = np.zeros((numValid,numFeats))
+#Xvalid = np.zeros((numValid,numFeats))
 
 for ind in range(numTrainTest):
     patID = trainTestIDs[ind]
@@ -74,7 +81,9 @@ for ind in range(numTrainTest):
     curMATcontent = sio.loadmat(patFile)
     volData = curMATcontent["resizedDCM"]
     volDataVector = np.reshape(volData,(numFeats))
-    Xdata[ind, :] = volDataVector
+    #Xdata[ind, :] = volDataVector
+    XdataAll[indexAll, :] = volDataVector
+    indexAll=indexAll+1
     Ydata[ind] = int(trainTestLabels[ind])
     print("Ind:" + str(ind))
 
@@ -84,41 +93,39 @@ for ind in range(numValid):
     curMATcontent = sio.loadmat(patFile)
     volData = curMATcontent["resizedDCM"]
     volDataVector = np.reshape(volData,(numFeats))
-    Xvalid[ind, :] = volDataVector
+    #Xvalid[ind, :] = volDataVector
+    XdataAll[indexAll, :] = volDataVector
+    indexAll=indexAll+1
     print("Ind2:" + str(ind))
+
+transformer = random_projection.SparseRandomProjection()
+XdataNew = transformer.fit_transform(XdataAll)
+
+Xdata = XdataNew[0:numTrainTest,:]
+Xvalid = XdataNew[numTrainTest:(numTrainTest+numValid),:]
+
+print(Xdata.shape)
+print(Xvalid.shape)
 
 Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_state=42)
 
-clf = tree.DecisionTreeClassifier()
+clf = RandomForestClassifier(max_depth=5, n_estimators=20, max_features=100)
 clf = clf.fit(Xtrain,Ytrain)
 
 yHatTrainP = clf.predict_proba(Xtrain)
 yHatTestP = clf.predict_proba(Xtest)
 YvalidP = clf.predict_proba(Xvalid)
 
-yHatTrain = yHatTrainP[:,1]
-yHatTest = yHatTestP[:,1]
+
+sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
+
 Yvalid = YvalidP[:,1]
 
-#TODO: TRY SVM. HERE IS CODE
-#from sklearn import svm
-#X = [[0, 0], [1, 1]]
-#y = [0, 1]
-#clf = svm.SVC()
-#clf.fit(X, y)
-#clf.predict([[2., 2.]])
-
-
-trainError = sum(abs(yHatTrain-Ytrain))/len(Ytrain)
-testError = sum(abs(yHatTest-Ytest))/len(Ytest)
-
-print(trainError)
-print(testError)
-
-with open('submission.csv', 'w') as csvfile:
+with open('submissionRandProjRandomForest.csv', 'w') as csvfile:
     fieldnames = ['id', 'cancer']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
     writer.writeheader()
     for ind in range(numValid):
         writer.writerow({'id': validationIDs[ind], 'cancer': str(Yvalid[ind])})
+
