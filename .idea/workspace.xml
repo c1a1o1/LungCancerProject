@@ -21,31 +21,21 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="PYTHON_init.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/PYTHON_init.py">
+      <file leaf-file-name="PYTHON_CNN.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/PYTHON_CNN.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="266">
-              <caret line="51" column="38" selection-start-line="51" selection-start-column="38" selection-end-line="51" selection-end-column="38" />
+            <state relative-caret-position="766">
+              <caret line="121" column="14" selection-start-line="121" selection-start-column="14" selection-end-line="121" selection-end-column="14" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="PYTHON_randomProj.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/PYTHON_randomProj.py">
+      <file leaf-file-name="PYTHON_initCNN.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/PYTHON_initCNN.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="511">
-              <caret line="64" column="0" selection-start-line="64" selection-start-column="0" selection-end-line="64" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="PYTHON_initSVM.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/PYTHON_initSVM.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="345">
-              <caret line="103" column="16" selection-start-line="103" selection-start-column="16" selection-end-line="103" selection-end-column="16" />
+            <state relative-caret-position="289">
+              <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="81" selection-end-column="33" />
               <folding />
             </state>
           </provider>
@@ -61,6 +51,7 @@
       <list>
         <option value="$PROJECT_DIR$/PYTHON_init.py" />
         <option value="$PROJECT_DIR$/PYTHON_randomProj.py" />
+        <option value="$PROJECT_DIR$/PYTHON_CNN.py" />
       </list>
     </option>
   </component>
@@ -121,6 +112,11 @@
   </component>
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\dev\git\LungCancerProject" />
+    </key>
   </component>
   <component name="RunManager">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
@@ -330,6 +326,22 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="511">
           <caret line="64" column="0" selection-start-line="64" selection-start-column="0" selection-end-line="64" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PYTHON_initCNN.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="289">
+          <caret line="18" column="0" selection-start-line="18" selection-start-column="0" selection-end-line="81" selection-end-column="33" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PYTHON_CNN.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="766">
+          <caret line="121" column="14" selection-start-line="121" selection-start-column="14" selection-end-line="121" selection-end-column="14" />
           <folding />
         </state>
       </provider>
