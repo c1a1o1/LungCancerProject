@@ -26,19 +26,6 @@ from sklearn import tree
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 
-batch_size = 128
-nb_classes = 10
-nb_epoch = 12
-
-# input image dimensions
-img_rows, img_cols = 28, 28
-# number of convolutional filters to use
-nb_filters = 32
-# size of pooling area for max pooling
-pool_size = (2, 2)
-# convolution kernel size
-kernel_size = (3, 3)
-
 matFiles = []
 trainTestIDs = []
 trainTestLabels = []
@@ -58,7 +45,7 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 #TODO: CHANGE WHEN DONE TESTING
 numTrainTestAll = len(trainTestIDs);
-numTrainTest=300
+numTrainTest=120
 numValid = len(validationIDs)
 #numValid=10
 
@@ -100,7 +87,7 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 
 batch_size = 10
 nb_classes = 2
-nb_epoch = 12
+nb_epoch = 10
 
 # input image dimensions
 img_rows = 256
@@ -172,13 +159,13 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3109
 
 model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=2, validation_data=(Xtest, Y_test))
+          verbose=1, validation_data=(Xtest, Y_test))
 score = model.evaluate(Xtest, Y_test, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
 
-newPred = model.predict(Xvalid)
-sio.savemat('CNN_currentPred2.mat',mdict={'newPred':newPred})
+newPred = model.predict_proba(Xvalid)
+sio.savemat('CNN_currentPred3.mat',mdict={'newPred':newPred})
 
 """
 sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
