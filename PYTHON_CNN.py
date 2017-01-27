@@ -41,7 +41,7 @@ kernel_size = (3, 3)
 
 #TODO: CHANGE WHEN DONE TESTING
 #numTrainTest = len(trainTestIDs);
-numTrainTest=20
+numTrainTest=10
 #numValid = len(validationIDs)
 numValid=10
 
@@ -117,18 +117,20 @@ kernel_size = (4,4,4)
 # the data, shuffled and split between train and test sets
 #(X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-# if K.image_dim_ordering() == 'th':
-#     Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
-#     Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
-#     input_shape = (1, img_rows, img_cols,img_sli)
-# else:
-#     Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli, 1)
-#     Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli, 1)
-#     input_shape = (img_rows, img_cols,img_sli, 1)
+if K.image_dim_ordering() == 'th':
+    Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
+    Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
+    Xvalid = Xvalid.reshape(Xvalid.shape[0], 1, img_rows, img_cols, img_sli)
+    input_shape = (1, img_rows, img_cols,img_sli)
+else:
+    Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli, 1)
+    Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli, 1)
+    Xvalid = Xvalid.reshape(Xvalid.shape[0], img_rows, img_cols, img_sli, 1)
+    input_shape = (img_rows, img_cols,img_sli, 1)
 
-Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli,1)
-Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli,1)
-input_shape = (img_rows, img_cols,img_sli,1)
+#Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli,1)
+#Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli,1)
+#input_shape = (img_rows, img_cols,img_sli,1)
 
 Xtrain = Xtrain.astype('float32')
 Xtest = Xtest.astype('float32')
@@ -171,7 +173,7 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 
 model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
           verbose=1, validation_data=(Xtest, Y_test))
-score = model.evaluate(Xtest, Ytest, verbose=0)
+score = model.evaluate(Xtest, Y_test, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
 
