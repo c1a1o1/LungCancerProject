@@ -126,9 +126,9 @@ kernel_size = (4,4,4)
 #     Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli, 1)
 #     input_shape = (img_rows, img_cols,img_sli, 1)
 
-Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
-Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
-input_shape = (1, img_rows, img_cols,img_sli)
+Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli,1)
+Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli,1)
+input_shape = (img_rows, img_cols,img_sli,1)
 
 Xtrain = Xtrain.astype('float32')
 Xtest = Xtest.astype('float32')
@@ -160,7 +160,7 @@ model.add(Dropout(0.2))
 model.add(Flatten())
 model.add(Dense(128, init='normal',activation='relu'))
 model.add(Dense(nb_classes, init='normal',activation='softmax'))
-model.compile(loss='sparse_categorical_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 # model.compile(loss='sparse_categorical_crossentropy',
 #               optimizer='adadelta',
 #               metrics=['accuracy'])
