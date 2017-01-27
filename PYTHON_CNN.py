@@ -39,10 +39,11 @@ pool_size = (2, 2)
 # convolution kernel size
 kernel_size = (3, 3)
 
-# the data, shuffled and split between train and test sets
-#(X_train, y_train), (X_test, y_test) = mnist.load_data()
-
-#print(X_train.shape)
+#TODO: CHANGE WHEN DONE TESTING
+#numTrainTest = len(trainTestIDs);
+numTrainTest=20
+#numValid = len(validationIDs)
+numValid=10
 
 matFiles = []
 trainTestIDs = []
@@ -62,11 +63,7 @@ with open('stage1_sample_submission.csv') as csvfile:
         validationIDs.append(row['id'])
 
 
-#TODO: CHANGE WHEN DONE TESTING
-#numTrainTest = len(trainTestIDs);
-numTrainTest=100
-#numValid = len(validationIDs)
-numValid=10
+
 
 #numFeats = 256*256*100
 Xdata = np.zeros((numTrainTest,256,256,100))
@@ -101,9 +98,9 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 # yHatTestP = clf.predict_proba(Xtest)
 # YvalidP = clf.predict_proba(Xvalid)
 
-batch_size = 128
+batch_size = 6
 nb_classes = 2
-nb_epoch = 12
+nb_epoch = 8
 
 # input image dimensions
 img_rows = 256
@@ -111,7 +108,7 @@ img_cols = 256
 img_sli = 100
 
 # number of convolutional filters to use
-nb_filters = 32
+nb_filters = 10
 # size of pooling area for max pooling
 pool_size = (5,5,5)
 # convolution kernel size
@@ -120,19 +117,23 @@ kernel_size = (4,4,4)
 # the data, shuffled and split between train and test sets
 #(X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-if K.image_dim_ordering() == 'th':
-    Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
-    Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
-    input_shape = (1, img_rows, img_cols,img_sli)
-else:
-    Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli, 1)
-    Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli, 1)
-    input_shape = (img_rows, img_cols,img_sli, 1)
+# if K.image_dim_ordering() == 'th':
+#     Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
+#     Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
+#     input_shape = (1, img_rows, img_cols,img_sli)
+# else:
+#     Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli, 1)
+#     Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli, 1)
+#     input_shape = (img_rows, img_cols,img_sli, 1)
+
+Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
+Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
+input_shape = (1, img_rows, img_cols,img_sli)
 
 Xtrain = Xtrain.astype('float32')
 Xtest = Xtest.astype('float32')
-Xtrain /= 255
-Xtest /= 255
+#Xtrain /= 255
+#Xtest /= 255
 print('X_train shape:', Xtrain.shape)
 print(Xtrain.shape[0], 'train samples')
 print(Xtest.shape[0], 'test samples')
@@ -141,38 +142,32 @@ print(Xtest.shape[0], 'test samples')
 Y_train = np_utils.to_categorical(Ytrain, nb_classes)
 Y_test = np_utils.to_categorical(Ytest, nb_classes)
 
-model = Sequential()
+print(Y_test)
 
-model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
-                        border_mode='valid',
-                        input_shape=input_shape))
-
-#This is code from mnist_cnn.py
-# model.add(Activation('softmax'))
-# model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1], kernel_size[2]))
-# model.add(Activation('softmax'))
-# model.add(MaxPooling3D(pool_size=pool_size))
-# model.add(Dropout(0.25))
-# model.add(Flatten())
-# model.add(Dense(128))
-# model.add(Activation('relu'))
-# model.add(Dropout(0.5))
-# model.add(Dense(nb_classes))
-# model.add(Activation('softmax'))
 
 #Here is code from a 3D CNN example on the following blog:
 #   http://learnandshare645.blogspot.in/2016/06/3d-cnn-in-keras-action-recognition.html
-model.add(MaxPooling3D(pool_size=pool_size))
-model.add(Dropout(0.5))
-#model.add(Flatten())
-model.add(Dense(4))
-#model.add(Dropout(0.5))
-#model.add(Dense(nb_classes,init='normal'))
-model.add(Activation('sigmoid'))
+#
+#Good initial CNN tutorial:
+#   http://machinelearningmastery.com/handwritten-digit-recognition-using-convolutional-neural-networks-python-keras/
 
-model.compile(loss='sparse_categorical_crossentropy',
-              optimizer='adadelta',
-              metrics=['accuracy'])
+model = Sequential()
+model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
+                        border_mode='valid',
+                        input_shape=input_shape))
+model.add(MaxPooling3D(pool_size=pool_size))
+model.add(Dropout(0.2))
+model.add(Flatten())
+model.add(Dense(128, init='normal',activation='relu'))
+model.add(Dense(nb_classes, init='normal',activation='softmax'))
+model.compile(loss='sparse_categorical_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
+# model.compile(loss='sparse_categorical_crossentropy',
+#               optimizer='adadelta',
+#               metrics=['accuracy'])
+
+#ERROR HERE. TODO: LOOK AT THESE TWO PAGES
+#   https://github.com/fchollet/keras/issues/3009
+#   https://github.com/fchollet/keras/issues/3109
 
 model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
           verbose=1, validation_data=(Xtest, Ytest))
