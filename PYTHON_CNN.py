@@ -39,12 +39,6 @@ pool_size = (2, 2)
 # convolution kernel size
 kernel_size = (3, 3)
 
-#TODO: CHANGE WHEN DONE TESTING
-#numTrainTest = len(trainTestIDs);
-numTrainTest=10
-#numValid = len(validationIDs)
-numValid=10
-
 matFiles = []
 trainTestIDs = []
 trainTestLabels = []
@@ -62,8 +56,14 @@ with open('stage1_sample_submission.csv') as csvfile:
     for row in reader:
         validationIDs.append(row['id'])
 
+#TODO: CHANGE WHEN DONE TESTING
+numTrainTestAll = len(trainTestIDs);
+numTrainTest=100
+numValid = len(validationIDs)
+#numValid=10
 
-
+randInds = np.random.permutation(numTrainTestAll)
+randIndsUse = randInds[0:numTrainTest]
 
 #numFeats = 256*256*100
 Xdata = np.zeros((numTrainTest,256,256,100))
@@ -72,7 +72,7 @@ Ydata = np.zeros(numTrainTest)
 Xvalid = np.zeros((numValid,256,256,100))
 
 for ind in range(numTrainTest):
-    patID = trainTestIDs[ind]
+    patID = trainTestIDs[randIndsUse[ind]]
     patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_"+patID+".mat"
     curMATcontent = sio.loadmat(patFile)
     volData = curMATcontent["resizedDCM"]
@@ -100,7 +100,7 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 
 batch_size = 6
 nb_classes = 2
-nb_epoch = 2
+nb_epoch = 5
 
 # input image dimensions
 img_rows = 256
@@ -172,7 +172,7 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3109
 
 model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_data=(Xtest, Y_test))
+          verbose=2, validation_data=(Xtest, Y_test))
 score = model.evaluate(Xtest, Y_test, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
