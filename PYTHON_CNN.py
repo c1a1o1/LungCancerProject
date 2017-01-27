@@ -100,7 +100,7 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 
 batch_size = 6
 nb_classes = 2
-nb_epoch = 8
+nb_epoch = 2
 
 # input image dimensions
 img_rows = 256
@@ -174,6 +174,9 @@ model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
 score = model.evaluate(Xtest, Ytest, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
+
+newPred = model.predict(Xvalid)
+sio.savemat('CNN_currentPred.mat',mdict={'newPred':newPred})
 
 """
 sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
