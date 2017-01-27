@@ -19,6 +19,8 @@ from keras.utils import np_utils
 from keras import backend as K
 
 import scipy.io as sio
+import time
+import datetime
 import csv
 from sklearn.cross_validation import train_test_split
 from sklearn import random_projection
@@ -87,7 +89,7 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 
 batch_size = 10
 nb_classes = 2
-nb_epoch = 10
+nb_epoch = 8
 
 # input image dimensions
 img_rows = 256
@@ -165,7 +167,12 @@ print('Test score:', score[0])
 print('Test accuracy:', score[1])
 
 newPred = model.predict_proba(Xvalid)
-sio.savemat('CNN_currentPred3.mat',mdict={'newPred':newPred})
+
+ts = time.time()
+st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
+fileName = 'cnnPredictions/cnnPredictionFrom_'+st+'.mat'
+
+sio.savemat(fileName,mdict={'newPred':newPred})
 
 """
 sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
