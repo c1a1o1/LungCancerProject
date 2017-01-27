@@ -58,7 +58,7 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 #TODO: CHANGE WHEN DONE TESTING
 numTrainTestAll = len(trainTestIDs);
-numTrainTest=100
+numTrainTest=300
 numValid = len(validationIDs)
 #numValid=10
 
@@ -98,9 +98,9 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 # yHatTestP = clf.predict_proba(Xtest)
 # YvalidP = clf.predict_proba(Xvalid)
 
-batch_size = 6
+batch_size = 10
 nb_classes = 2
-nb_epoch = 5
+nb_epoch = 12
 
 # input image dimensions
 img_rows = 256
@@ -178,7 +178,7 @@ print('Test score:', score[0])
 print('Test accuracy:', score[1])
 
 newPred = model.predict(Xvalid)
-sio.savemat('CNN_currentPred.mat',mdict={'newPred':newPred})
+sio.savemat('CNN_currentPred2.mat',mdict={'newPred':newPred})
 
 """
 sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
