@@ -160,7 +160,7 @@ model.add(Dropout(0.2))
 model.add(Flatten())
 model.add(Dense(128, init='normal',activation='relu'))
 model.add(Dense(nb_classes, init='normal',activation='softmax'))
-model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 # model.compile(loss='sparse_categorical_crossentropy',
 #               optimizer='adadelta',
 #               metrics=['accuracy'])
@@ -170,7 +170,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['a
 #   https://github.com/fchollet/keras/issues/3109
 
 model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_data=(Xtest, Ytest))
+          verbose=1, validation_data=(Xtest, Y_test))
 score = model.evaluate(Xtest, Ytest, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
