@@ -96,7 +96,7 @@ def dataGenerator(patIDnumbers, patLabels, indsUse):
                 XCur = XCur.reshape(1, img_rows, img_cols, img_sli, 1)
             YCur = int(patLabels[indsUse[ind]])
             YUse = np_utils.to_categorical(YCur, nb_classes)
-            print("Ind:" + str(ind))
+            #print("Ind:" + str(ind))
             yield (XCur.astype('float32'),YUse)
 
 def validDataGenerator():
@@ -108,7 +108,7 @@ def validDataGenerator():
                 XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
             else:
                 XCur = XCur.reshape(1, img_rows, img_cols, img_sli, 1)
-            print("ValidInd:" + str(ind))
+            #print("ValidInd:" + str(ind))
             yield (XCur.astype('float32'))
 
 
