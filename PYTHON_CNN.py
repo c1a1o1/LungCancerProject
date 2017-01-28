@@ -29,9 +29,9 @@ from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 
 
-batch_size = 10
+batch_size = 20
 nb_classes = 2
-nb_epoch = 2
+nb_epoch = 10
 
 # input image dimensions
 img_rows = 256
@@ -182,7 +182,7 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3109
 
 model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain),
-                    samples_per_epoch = 20, nb_epoch=nb_epoch, nb_val_samples=30,
+                    samples_per_epoch = 800, nb_epoch=nb_epoch, nb_val_samples=50,
                     verbose=1, validation_data=dataGenerator(trainTestIDs, trainTestLabels, indsTest))
 # score = model.evaluate_generator(Xtest, Y_test, verbose=0)
 # print('Test score:', score[0])
