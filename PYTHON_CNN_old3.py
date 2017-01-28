@@ -74,10 +74,13 @@ randInds = np.random.permutation(numTrainTestAll)
 indsTrain = randInds[0:numTrain]
 indsTest = randInds[numTrain:numTrainTestAll]
 
-if K.image_dim_ordering() == 'th':
-    input_shape = (1, img_rows, img_cols,img_sli)
-else:
-    input_shape = (img_rows, img_cols,img_sli, 1)
+Xtrain = np.zeros((numTrain,256,256,100))
+Ytrain = np.zeros(numTrain)
+Xtest = np.zeros((numTest,256,256,100))
+Ytest = np.zeros(numTest)
+
+
+Xvalid = np.zeros((numValid,256,256,100))
 
 def getVolData(patID):
     patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_" + patID + ".mat"
@@ -111,6 +114,47 @@ def validDataGenerator():
             print("ValidInd:" + str(ind))
             yield (XCur.astype('float32'))
 
+# for ind in range(numTest):
+#     patID = trainTestIDs[indsTest[ind]]
+#     Xtest[ind, :,:,:] = getVolData(patID)
+#     Ytest[ind] = int(trainTestLabels[indsTest[ind]])
+#     print("TestInd:" + str(ind))
+#
+# for ind in range(numValid):
+#     patID = validationIDs[ind]
+#     Xvalid[ind, :,:,:] = getVolData(patID)
+#     print("ValidInd:" + str(ind))
+
+if K.image_dim_ordering() == 'th':
+    Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
+    Xtest = Xtest.reshape(Xtest.shape[0], 1, img_rows, img_cols,img_sli)
+    Xvalid = Xvalid.reshape(Xvalid.shape[0], 1, img_rows, img_cols, img_sli)
+    input_shape = (1, img_rows, img_cols,img_sli)
+else:
+    Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli, 1)
+    Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli, 1)
+    Xvalid = Xvalid.reshape(Xvalid.shape[0], img_rows, img_cols, img_sli, 1)
+    input_shape = (img_rows, img_cols,img_sli, 1)
+
+#Xtrain = Xtrain.reshape(Xtrain.shape[0], img_rows, img_cols,img_sli,1)
+#Xtest = Xtest.reshape(Xtest.shape[0], img_rows, img_cols,img_sli,1)
+#input_shape = (img_rows, img_cols,img_sli,1)
+
+Xtrain = Xtrain.astype('float32')
+Xtest = Xtest.astype('float32')
+Xvalid = Xvalid.astype('float32')
+#Xtrain /= 255
+#Xtest /= 255
+print('X_train shape:', Xtrain.shape)
+print(Xtrain.shape[0], 'train samples')
+print(Xtest.shape[0], 'test samples')
+
+# convert class vectors to binary class matrices
+Y_train = np_utils.to_categorical(Ytrain, nb_classes)
+Y_test = np_utils.to_categorical(Ytest, nb_classes)
+
+print(Y_test)
+
 
 #Here is code from a 3D CNN example on the following blog:
 #   http://learnandshare645.blogspot.in/2016/06/3d-cnn-in-keras-action-recognition.html
@@ -138,8 +182,15 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3109
 
 model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain),
-                    samples_per_epoch = 1000, nb_epoch=nb_epoch, nb_val_samples=50,
+                    samples_per_epoch = 800, nb_epoch=nb_epoch, nb_val_samples=50,
                     verbose=1, validation_data=dataGenerator(trainTestIDs, trainTestLabels, indsTest))
+# score = model.evaluate_generator(Xtest, Y_test, verbose=0)
+# print('Test score:', score[0])
+# print('Test accuracy:', score[1])
+
+# yValidProb = model.predict_proba(Xvalid,batch_size=batch_size,verbose=1)
+# yValidPred = model.predict(Xvalid,batch_size=batch_size,verbose=1)
+# yValidClasses = model.predict_classes(Xvalid,batch_size=batch_size,verbose=1)
 
 yValidPred = model.predict_generator(validDataGenerator(),val_samples=len(validationIDs))
 
