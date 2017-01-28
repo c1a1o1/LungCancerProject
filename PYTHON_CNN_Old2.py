@@ -28,6 +28,64 @@ from sklearn import tree
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 
+matFiles = []
+trainTestIDs = []
+trainTestLabels = []
+
+validationIDs = []
+
+with open('stage1_labels.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        trainTestIDs.append(row['id'])
+        trainTestLabels.append(row['cancer'])
+
+with open('stage1_sample_submission.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        validationIDs.append(row['id'])
+
+#TODO: CHANGE WHEN DONE TESTING
+numTrainTestAll = len(trainTestIDs);
+numTrainTest=140
+numValid = len(validationIDs)
+#numValid=10
+
+randInds = np.random.permutation(numTrainTestAll)
+randIndsUse = randInds[0:numTrainTest]
+
+#numFeats = 256*256*100
+Xdata = np.zeros((numTrainTest,256,256,100))
+Ydata = np.zeros(numTrainTest)
+
+Xvalid = np.zeros((numValid,256,256,100))
+
+for ind in range(numTrainTest):
+    patID = trainTestIDs[randIndsUse[ind]]
+    patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_"+patID+".mat"
+    curMATcontent = sio.loadmat(patFile)
+    volData = curMATcontent["resizedDCM"]
+    #volDataVector = np.reshape(volData,(numFeats))
+    Xdata[ind, :,:,:] = volData
+    Ydata[ind] = int(trainTestLabels[ind])
+    print("Ind:" + str(ind))
+
+for ind in range(numValid):
+    patID = validationIDs[ind]
+    patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_"+patID+".mat"
+    curMATcontent = sio.loadmat(patFile)
+    volData = curMATcontent["resizedDCM"]
+    #volDataVector = np.reshape(volData,(numFeats))
+    Xvalid[ind, :,:,:] = volData
+    print("Ind2:" + str(ind))
+
+Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_state=42)
+
+# clf = RandomForestClassifier(max_depth=5, n_estimators=20, max_features=100)
+# clf = clf.fit(Xtrain,Ytrain)
+# yHatTrainP = clf.predict_proba(Xtrain)
+# yHatTestP = clf.predict_proba(Xtest)
+# YvalidP = clf.predict_proba(Xvalid)
 
 batch_size = 10
 nb_classes = 2
@@ -45,65 +103,8 @@ pool_size = (5,5,5)
 # convolution kernel size
 kernel_size = (4,4,4)
 
-matFiles = []
-trainTestIDs = []
-trainTestLabels = []
-validationIDs = []
-
-with open('stage1_labels.csv') as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        trainTestIDs.append(row['id'])
-        trainTestLabels.append(row['cancer'])
-
-with open('stage1_sample_submission.csv') as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        validationIDs.append(row['id'])
-
-#TODO: CHANGE WHEN DONE TESTING
-trainingRatio = 0.90
-#numTrainTestAll = len(trainTestIDs)
-numTrainTestAll = 100
-
-numTrain = int(np.floor(trainingRatio*numTrainTestAll))
-numTest = numTrainTestAll-numTrain
-numValid = len(validationIDs)
-
-randInds = np.random.permutation(numTrainTestAll)
-indsTrain = randInds[0:numTrain]
-indsTest = randInds[numTrain:numTrainTestAll]
-
-Xtrain = np.zeros((numTrain,256,256,100))
-Ytrain = np.zeros(numTrain)
-Xtest = np.zeros((numTest,256,256,100))
-Ytest = np.zeros(numTest)
-
-
-Xvalid = np.zeros((numValid,256,256,100))
-
-def getVolData(patID):
-    patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_" + patID + ".mat"
-    curMATcontent = sio.loadmat(patFile)
-    volData = curMATcontent["resizedDCM"]
-    return volData
-
-for ind in range(numTrain):
-    patID = trainTestIDs[indsTrain[ind]]
-    Xtrain[ind, :,:,:] = getVolData(patID)
-    Ytrain[ind] = int(trainTestLabels[indsTrain[ind]])
-    print("TrainInd:" + str(ind))
-
-for ind in range(numTest):
-    patID = trainTestIDs[indsTest[ind]]
-    Xtest[ind, :,:,:] = getVolData(patID)
-    Ytest[ind] = int(trainTestLabels[indsTest[ind]])
-    print("TestInd:" + str(ind))
-
-for ind in range(numValid):
-    patID = validationIDs[ind]
-    Xvalid[ind, :,:,:] = getVolData(patID)
-    print("ValidInd:" + str(ind))
+# the data, shuffled and split between train and test sets
+#(X_train, y_train), (X_test, y_test) = mnist.load_data()
 
 if K.image_dim_ordering() == 'th':
     Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
@@ -175,7 +176,6 @@ st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionFrom_'+st+'.mat'
 
 sio.savemat(fileName,mdict={'yValidProb':yValidProb,'yValidPred':yValidPred,'yValidClasses':yValidClasses})
-
 
 """
 sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
