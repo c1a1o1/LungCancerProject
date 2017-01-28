@@ -47,7 +47,7 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 #TODO: CHANGE WHEN DONE TESTING
 numTrainTestAll = len(trainTestIDs);
-numTrainTest=120
+numTrainTest=140
 numValid = len(validationIDs)
 #numValid=10
 
@@ -89,7 +89,7 @@ Xtrain,Xtest,Ytrain,Ytest = train_test_split(Xdata,Ydata,test_size=0.1,random_st
 
 batch_size = 10
 nb_classes = 2
-nb_epoch = 8
+nb_epoch = 2
 
 # input image dimensions
 img_rows = 256
@@ -149,7 +149,8 @@ model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2
 model.add(MaxPooling3D(pool_size=pool_size))
 model.add(Dropout(0.2))
 model.add(Flatten())
-model.add(Dense(128, init='normal',activation='relu'))
+#model.add(Dense(128, init='normal',activation='relu'))
+model.add(Dense(16, init='normal',activation='relu'))
 model.add(Dense(nb_classes, init='normal',activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 # model.compile(loss='sparse_categorical_crossentropy',
