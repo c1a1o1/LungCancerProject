@@ -166,13 +166,15 @@ score = model.evaluate(Xtest, Y_test, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
 
-newPred = model.predict_proba(Xvalid)
+yValidProb = model.predict_proba(Xvalid,batch_size=batch_size,verbose=1)
+yValidPred = model.predict(Xvalid,batch_size=batch_size,verbose=1)
+yValidClasses = model.predict_classes(Xvalid,batch_size=batch_size,verbose=1)
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionFrom_'+st+'.mat'
 
-sio.savemat(fileName,mdict={'newPred':newPred})
+sio.savemat(fileName,mdict={'yValidProb':yValidProb,'yValidPred':yValidPred,'yValidClasses':yValidClasses})
 
 """
 sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})

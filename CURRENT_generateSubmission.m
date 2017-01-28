@@ -1,5 +1,6 @@
 
-load('RES_randomProj.mat');
+%load('RES_randomProj.mat');
+load('cnnPredictionFrom_2017_01_27__17_13_13.mat');
 %%
 [XX,YY,TT] = perfcurve(Ytest,yHatTestP(:,2),1,...
     'XCrit','accu','YCrit','fpr');
@@ -16,7 +17,7 @@ legend('Accu vs Thresh','False Pos Vs Thresh','False Neg vs Thresh')
 
 %%
 %based on above, I will say 0.3 is good threshold
-thresh=0.3;
+%thresh=0.3;
 %submit = int16(YvalidP(:,2)>0.3);
 submit = YvalidP(:,2);
 
