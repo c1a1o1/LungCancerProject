@@ -63,8 +63,8 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 #TODO: CHANGE WHEN DONE TESTING
 trainingRatio = 0.90
-#numTrainTestAll = len(trainTestIDs)
-numTrainTestAll = 100
+numTrainTestAll = len(trainTestIDs)
+#numTrainTestAll = 100
 
 numTrain = int(np.floor(trainingRatio*numTrainTestAll))
 numTest = numTrainTestAll-numTrain
@@ -88,11 +88,21 @@ def getVolData(patID):
     volData = curMATcontent["resizedDCM"]
     return volData
 
-for ind in range(numTrain):
-    patID = trainTestIDs[indsTrain[ind]]
-    Xtrain[ind, :,:,:] = getVolData(patID)
-    Ytrain[ind] = int(trainTestLabels[indsTrain[ind]])
-    print("TrainInd:" + str(ind))
+def trainGenerator(trainTestIDs,trainTestLabels,indsTrain):
+    while 1:
+        for ind in range(len(indsTrain)):
+            patID = trainTestIDs[indsTrain[ind]]
+            XtrainCur = getVolData(patID)
+            if K.image_dim_ordering() == 'th':
+                XtrainCur = XtrainCur.reshape(1, 1, img_rows, img_cols, img_sli)
+            else:
+                XtrainCur = XtrainCur.reshape(1, img_rows, img_cols, img_sli, 1)
+            YtrainCur = int(trainTestLabels[indsTrain[ind]])
+            YtrainUse = np_utils.to_categorical(YtrainCur, nb_classes)
+            print("TrainInd:" + str(ind))
+            yield (XtrainCur.astype('float32'),YtrainUse)
+
+
 
 for ind in range(numTest):
     patID = trainTestIDs[indsTest[ind]]
@@ -160,7 +170,8 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3009
 #   https://github.com/fchollet/keras/issues/3109
 
-model.fit(Xtrain, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
+model.fit_generator(trainGenerator(trainTestIDs,trainTestLabels,indsTrain),
+                    samples_per_epoch = 100, nb_epoch=nb_epoch,
           verbose=1, validation_data=(Xtest, Y_test))
 score = model.evaluate(Xtest, Y_test, verbose=0)
 print('Test score:', score[0])
