@@ -102,6 +102,17 @@ def dataGenerator(patIDnumbers, patLabels, indsUse):
             print("Ind:" + str(ind))
             yield (XCur.astype('float32'),YUse)
 
+def validDataGenerator():
+    while 1:
+        for ind in range(len(validationIDs)):
+            patID = validationIDs[ind]
+            XCur = getVolData(patID)
+            if K.image_dim_ordering() == 'th':
+                XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
+            else:
+                XCur = XCur.reshape(1, img_rows, img_cols, img_sli, 1)
+            print("ValidInd:" + str(ind))
+            yield (XCur.astype('float32'))
 
 # for ind in range(numTest):
 #     patID = trainTestIDs[indsTest[ind]]
@@ -109,10 +120,10 @@ def dataGenerator(patIDnumbers, patLabels, indsUse):
 #     Ytest[ind] = int(trainTestLabels[indsTest[ind]])
 #     print("TestInd:" + str(ind))
 #
-for ind in range(numValid):
-    patID = validationIDs[ind]
-    Xvalid[ind, :,:,:] = getVolData(patID)
-    print("ValidInd:" + str(ind))
+# for ind in range(numValid):
+#     patID = validationIDs[ind]
+#     Xvalid[ind, :,:,:] = getVolData(patID)
+#     print("ValidInd:" + str(ind))
 
 if K.image_dim_ordering() == 'th':
     Xtrain = Xtrain.reshape(Xtrain.shape[0], 1, img_rows, img_cols,img_sli)
@@ -177,15 +188,18 @@ model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain),
 # print('Test score:', score[0])
 # print('Test accuracy:', score[1])
 
-yValidProb = model.predict_proba(Xvalid,batch_size=batch_size,verbose=1)
-yValidPred = model.predict(Xvalid,batch_size=batch_size,verbose=1)
-yValidClasses = model.predict_classes(Xvalid,batch_size=batch_size,verbose=1)
+# yValidProb = model.predict_proba(Xvalid,batch_size=batch_size,verbose=1)
+# yValidPred = model.predict(Xvalid,batch_size=batch_size,verbose=1)
+# yValidClasses = model.predict_classes(Xvalid,batch_size=batch_size,verbose=1)
+
+yValidPred = model.predict_generator(validDataGenerator(),val_samples=len(validationIDs))
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionFrom_'+st+'.mat'
 
-sio.savemat(fileName,mdict={'yValidProb':yValidProb,'yValidPred':yValidPred,'yValidClasses':yValidClasses})
+#sio.savemat(fileName,mdict={'yValidProb':yValidProb,'yValidPred':yValidPred,'yValidClasses':yValidClasses})
+sio.savemat(fileName,mdict={'yValidPred':yValidPred})
 
 
 """
