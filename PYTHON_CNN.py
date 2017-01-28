@@ -88,28 +88,27 @@ def getVolData(patID):
     volData = curMATcontent["resizedDCM"]
     return volData
 
-def trainGenerator(trainTestIDs,trainTestLabels,indsTrain):
+def dataGenerator(patIDnumbers, patLabels, indsUse):
     while 1:
-        for ind in range(len(indsTrain)):
-            patID = trainTestIDs[indsTrain[ind]]
-            XtrainCur = getVolData(patID)
+        for ind in range(len(indsUse)):
+            patID = patIDnumbers[indsUse[ind]]
+            XCur = getVolData(patID)
             if K.image_dim_ordering() == 'th':
-                XtrainCur = XtrainCur.reshape(1, 1, img_rows, img_cols, img_sli)
+                XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
             else:
-                XtrainCur = XtrainCur.reshape(1, img_rows, img_cols, img_sli, 1)
-            YtrainCur = int(trainTestLabels[indsTrain[ind]])
-            YtrainUse = np_utils.to_categorical(YtrainCur, nb_classes)
-            print("TrainInd:" + str(ind))
-            yield (XtrainCur.astype('float32'),YtrainUse)
+                XCur = XCur.reshape(1, img_rows, img_cols, img_sli, 1)
+            YCur = int(patLabels[indsUse[ind]])
+            YUse = np_utils.to_categorical(YCur, nb_classes)
+            print("Ind:" + str(ind))
+            yield (XCur.astype('float32'),YUse)
 
 
-
-for ind in range(numTest):
-    patID = trainTestIDs[indsTest[ind]]
-    Xtest[ind, :,:,:] = getVolData(patID)
-    Ytest[ind] = int(trainTestLabels[indsTest[ind]])
-    print("TestInd:" + str(ind))
-
+# for ind in range(numTest):
+#     patID = trainTestIDs[indsTest[ind]]
+#     Xtest[ind, :,:,:] = getVolData(patID)
+#     Ytest[ind] = int(trainTestLabels[indsTest[ind]])
+#     print("TestInd:" + str(ind))
+#
 for ind in range(numValid):
     patID = validationIDs[ind]
     Xvalid[ind, :,:,:] = getVolData(patID)
@@ -132,6 +131,7 @@ else:
 
 Xtrain = Xtrain.astype('float32')
 Xtest = Xtest.astype('float32')
+Xvalid = Xvalid.astype('float32')
 #Xtrain /= 255
 #Xtest /= 255
 print('X_train shape:', Xtrain.shape)
@@ -170,12 +170,12 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3009
 #   https://github.com/fchollet/keras/issues/3109
 
-model.fit_generator(trainGenerator(trainTestIDs,trainTestLabels,indsTrain),
+model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain),
                     samples_per_epoch = 100, nb_epoch=nb_epoch,
-          verbose=1, validation_data=(Xtest, Y_test))
-score = model.evaluate(Xtest, Y_test, verbose=0)
-print('Test score:', score[0])
-print('Test accuracy:', score[1])
+                    verbose=1, validation_data=dataGenerator(trainTestIDs, trainTestLabels, indsTest))
+# score = model.evaluate_generator(Xtest, Y_test, verbose=0)
+# print('Test score:', score[0])
+# print('Test accuracy:', score[1])
 
 yValidProb = model.predict_proba(Xvalid,batch_size=batch_size,verbose=1)
 yValidPred = model.predict(Xvalid,batch_size=batch_size,verbose=1)
