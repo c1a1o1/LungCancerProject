@@ -19,12 +19,12 @@ legend('Accu vs Thresh','False Pos Vs Thresh','False Neg vs Thresh')
 %based on above, I will say 0.3 is good threshold
 %thresh=0.3;
 %submit = int16(YvalidP(:,2)>0.3);
-submit = YvalidP(:,2);
+submit = yValidProb(:,2);
 
 load('stage1_validationIDs.mat');
 load('stage1_labelsMAT.mat');
 
-fileID = fopen('submission3.csv','w');
+fileID = fopen('submission4.csv','w');
 fprintf(fileID,'id,cancer\n');
 for i = 1:length(id)
     fprintf(fileID,'%s,%d\n',id{i},submit(i));

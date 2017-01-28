@@ -159,7 +159,7 @@ model.add(MaxPooling3D(pool_size=pool_size))
 model.add(Dropout(0.2))
 model.add(Flatten())
 #model.add(Dense(128, init='normal',activation='relu'))
-model.add(Dense(16, init='normal',activation='relu'))
+model.add(Dense(16, init='normal',activation='sigmoid'))
 model.add(Dense(nb_classes, init='normal',activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 # model.compile(loss='sparse_categorical_crossentropy',
@@ -171,7 +171,7 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 #   https://github.com/fchollet/keras/issues/3109
 
 model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain),
-                    samples_per_epoch = 100, nb_epoch=nb_epoch,
+                    samples_per_epoch = 20, nb_epoch=nb_epoch, nb_val_samples=30,
                     verbose=1, validation_data=dataGenerator(trainTestIDs, trainTestLabels, indsTest))
 # score = model.evaluate_generator(Xtest, Y_test, verbose=0)
 # print('Test score:', score[0])
