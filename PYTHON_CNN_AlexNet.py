@@ -122,6 +122,8 @@ def validDataGenerator2D():
                 currentXslice = XCur[:,:,slice]
                 currentInput = np.zeros((3,227,227))
                 currentInput[0,:,:] = imresize(currentXslice,(227,227))
+                currentInput[1, :, :] = currentInput[0,:,:]
+                currentInput[2, :, :] = currentInput[0, :, :]
                 currentInput = currentInput.reshape(1,3,227,227)
                 # print("ValidInd:" + str(ind))
                 yield (currentInput.astype('float32'))
@@ -136,7 +138,7 @@ def validDataGenerator2D():
 
 alexmodel = convnet('alexnet')
 alexmodel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-yValidPredAlex = alexmodel.predict_generator(validDataGenerator2D(),val_samples=len(validationIDs))
+yValidPredAlex = alexmodel.predict_generator(validDataGenerator2D(),val_samples=len(validationIDs)*img_sli)
 
 
 ts = time.time()
