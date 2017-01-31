@@ -140,6 +140,10 @@ alexmodel = convnet('alexnet')
 alexmodel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 yValidPredAlex = alexmodel.predict_generator(validDataGenerator2D(),val_samples=len(validationIDs)*img_sli)
 
+#	YVALIDPREDALEX WILL OUTPUT 19800X1000 ARRAY
+#TODO: DO THE FOLLOWING
+#	CONSTRUCT DATA SET OF 198 ARRAYS OF SIZE 100X1000 FOR SLICESxCATEGORIES
+#	RUN A RANDOM FOREST CLASSIFIER 
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
