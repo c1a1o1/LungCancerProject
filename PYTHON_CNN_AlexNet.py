@@ -145,14 +145,15 @@ yValidPredAlex = alexmodel.predict_generator(validDataGenerator2D(),val_samples=
 #	CONSTRUCT DATA SET OF 198 ARRAYS OF SIZE 100X1000 FOR SLICESxCATEGORIES
 #	RUN A RANDOM FOREST CLASSIFIER 
 
-yValidCatPredAlex = np.zeros((198,100))
+numPts = 198
+yValidCatPredAlex = np.zeros((numPts,img_sli))
 volInd=0
 sliceInd=0
-for ind in range(19800):
+for ind in range(img_sli*numPts):
     currentCategory = np.argmax(yValidPredAlex[ind,:])
     yValidCatPredAlex[volInd,sliceInd] = currentCategory
     sliceInd = sliceInd+1
-    if(sliceInd>99):
+    if(sliceInd>=img_sli):
         sliceInd=0
         volInd=volInd+1
 
@@ -161,7 +162,7 @@ st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionAlexNetFrom_'+st+'.mat'
 
 #sio.savemat(fileName,mdict={'yValidProb':yValidProb,'yValidPred':yValidPred,'yValidClasses':yValidClasses})
-sio.savemat(fileName,mdict={'yValidPredAlex':yValidPredAlex,'yValidCatPredAlex':yValidCatPredAlex})
+sio.savemat(fileName,mdict={'yValidCatPredAlex':yValidCatPredAlex})
 
 
 """
