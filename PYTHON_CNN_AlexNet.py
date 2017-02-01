@@ -113,10 +113,10 @@ def validDataGenerator():
             #print("ValidInd:" + str(ind))
             yield (XCur.astype('float32'))
 
-def validDataGenerator2D():
+def dataGenerator2D(arrayIDs):
     while 1:
-        for ind in range(len(validationIDs)):
-            patID = validationIDs[ind]
+        for ind in range(len(arrayIDs)):
+            patID = arrayIDs[ind]
             XCur = getVolData(patID)
             for slice in range(img_sli):
                 currentXslice = XCur[:,:,slice]
@@ -138,20 +138,30 @@ def validDataGenerator2D():
 
 alexmodel = convnet('alexnet')
 alexmodel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-yValidPredAlex = alexmodel.predict_generator(validDataGenerator2D(),val_samples=len(validationIDs)*img_sli)
+
+validationDataAlexNet = alexmodel.predict_generator(dataGenerator2D(validationIDs),val_samples=len(validationIDs)*img_sli)
+trainTestDataAlex = alexmodel.predict_generator(dataGenerator2D(trainTestIDs),val_samples=len(trainTestIDs)*img_sli)
+
 
 #	YVALIDPREDALEX WILL OUTPUT 19800X1000 ARRAY
 #TODO: DO THE FOLLOWING
 #	CONSTRUCT DATA SET OF 198 ARRAYS OF SIZE 100X1000 FOR SLICESxCATEGORIES
 #	RUN A RANDOM FOREST CLASSIFIER 
 
-numPts = 198
-yValidCatPredAlex = np.zeros((numPts,img_sli))
+numValidPts = len(validationIDs)
+numTrainTestPts = len(trainTestIDs)
+alexNetValidationCats = np.zeros((numValidPts,img_sli))
+alexNetTrainTestCats = np.zeros((numTrainTestPts,img_sli))
 volInd=0
 sliceInd=0
-for ind in range(img_sli*numPts):
-    currentCategory = np.argmax(yValidPredAlex[ind,:])
-    yValidCatPredAlex[volInd,sliceInd] = currentCategory
+for ind in range(img_sli*numTrainTestPts):
+    if(volInd<numValidPts):
+        currentCategory = np.argmax(validationDataAlexNet[ind,:])
+        alexNetValidationCats[volInd,sliceInd] = currentCategory
+
+    currentCategory2 = np.argmax(trainTestDataAlex[ind, :])
+    alexNetTrainTestCats[volInd, sliceInd] = currentCategory2
+
     sliceInd = sliceInd+1
     if(sliceInd>=img_sli):
         sliceInd=0
@@ -162,7 +172,7 @@ st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionAlexNetFrom_'+st+'.mat'
 
 #sio.savemat(fileName,mdict={'yValidProb':yValidProb,'yValidPred':yValidPred,'yValidClasses':yValidClasses})
-sio.savemat(fileName,mdict={'yValidCatPredAlex':yValidCatPredAlex})
+sio.savemat(fileName,mdict={'alexNetTrainTestCats':alexNetTrainTestCats,'alexNetValidationCats':alexNetValidationCats})
 
 
 """
