@@ -56,6 +56,7 @@ img_sli = 100
 nb_filters = 10
 # size of pooling area for max pooling
 pool_size = (5,5,5)
+pool_size2 = (5,5)
 # convolution kernel size
 kernel_size = (4,4,4)
 
@@ -94,8 +95,10 @@ for ind in range(numTrainTestAll):
 
 if K.image_dim_ordering() == 'th':
     input_shape = (1, img_rows, img_cols,img_sli)
+    input_shape2 = (1, img_sli, 1000 )
 else:
     input_shape = (img_rows, img_cols,img_sli, 1)
+    input_shape2 = (img_sli, 1000, 1)
 
 def getVolData(patID):
     patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_" + patID + ".mat"
@@ -132,6 +135,7 @@ def validDataGenerator():
 def dataGenerator2D(arrayIDs):
     while 1:
         for ind in range(len(arrayIDs)):
+            print("Currently at slice ind: " + str(ind) + " of " + str(len(arrayIDs)))
             patID = arrayIDs[ind]
             XCur = getVolData(patID)
             for slice in range(img_sli):
@@ -156,11 +160,23 @@ alexmodel = convnet('alexnet')
 #alexmodel = lungProjectAlexNet()
 alexmodel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 
+
+#TODO CHANGE THIS TO DEPEND ON WHETHER ALEXNET HAS WEIGHTS
+"""
 print("Now predicting training/test data from AlexNet layers")
 trainTestDataAlex = alexmodel.predict_generator(dataGenerator2D(trainTestIDs),val_samples=len(trainTestIDs)*img_sli)
 
 print("Now predicting validation data from AlexNet layers")
 validationDataAlexNet = alexmodel.predict_generator(dataGenerator2D(validationIDs),val_samples=len(validationIDs)*img_sli)
+
+ts = time.time()
+st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
+fileName = 'cnnPredictions/alexNetFeaturesFrom_'+st+'.mat'
+sio.savemat(fileName,mdict={'trainTestDataAlex':trainTestDataAlex,'validationDataAlexNet':validationDataAlexNet})
+"""
+mat_contents = sio.loadmat('cnnPredictions/alexNetFeaturesFrom_2017_02_02__02_55_51.mat')
+validationDataAlexNet = mat_contents['validationDataAlexNet']
+trainTestDataAlex = mat_contents['trainTestDataAlex']
 
 
 #	YVALIDPREDALEX WILL OUTPUT 19800X1000 ARRAY
@@ -205,16 +221,31 @@ for ind in range(img_sli*numTrainTestPts):
         volInd=volInd+1
 
 alexTrain,alexTest,Ytrain,Ytest = train_test_split(alexNetTrainTest,Ydata,test_size=0.2,random_state=42)
+
+Ytrain = np_utils.to_categorical(Ytrain, nb_classes)
+Ytest = np_utils.to_categorical(Ytest, nb_classes)
+
+if K.image_dim_ordering() == 'th':
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, 1000)
+    alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, 1000)
+    alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, 1000)
+    input_shape = (1, img_sli, 1000)
+else:
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, 1000, 1)
+    alexTest = alexTest.reshape(alexTest.shape[0], img_sli, 1000, 1)
+    alexNetValid = alexNetValid.reshape(alexNetValid.shape[0], img_sli, 1000, 1)
+    input_shape = (img_sli, 1000, 1)
+
 print("Now constructing the new CNN")
 postAlexModel = Sequential()
 
 postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
                                 border_mode='valid',
-                                input_shape=input_shape))
+                                input_shape=input_shape2))
 postAlexModel.add(Activation('relu'))
 postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
 postAlexModel.add(Activation('relu'))
-postAlexModel.add(MaxPooling2D(pool_size=pool_size))
+postAlexModel.add(MaxPooling2D(pool_size=pool_size2))
 postAlexModel.add(Dropout(0.25))
 
 postAlexModel.add(Flatten())
@@ -233,7 +264,7 @@ postAlexModel.fit(alexTrain, Ytrain, batch_size=batch_size, nb_epoch=nb_epoch,
 score = postAlexModel.evaluate(alexTest, Ytest, verbose=1)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])
-prediction = postAlexModel.predict(validationDataAlexNet)
+prediction = postAlexModel.predict(alexNetValid)
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')

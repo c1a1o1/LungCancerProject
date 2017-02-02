@@ -26,10 +26,13 @@ submit = yValidPred(:,2);
 ensemble = (yValidPred+YvalidP)./2;
 submit = ensemble(:,2);
 %%
+
+submit = prediction(:,2);
+
 load('stage1_validationIDs.mat');
 load('stage1_labelsMAT.mat');
 
-fileID = fopen('submission_ensemble.csv','w');
+fileID = fopen('submission_alexNet1.csv','w');
 fprintf(fileID,'id,cancer\n');
 for i = 1:length(id)
     fprintf(fileID,'%s,%d\n',id{i},submit(i));
