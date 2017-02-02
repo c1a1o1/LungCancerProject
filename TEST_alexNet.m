@@ -14,3 +14,10 @@ end
 [probs,predictions] = max(yValidByVolume,[],2);
 probs = reshape(probs,198,1000);
 predictions = reshape(predictions,198,1000);
+
+%%
+
+%h5create('myfile.h5','/DS1',Inf)
+h5write('myfile.h5', '/DS1', layers)
+
+h5disp('myfile.h5')

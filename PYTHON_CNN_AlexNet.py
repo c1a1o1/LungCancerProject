@@ -88,6 +88,10 @@ randInds = np.random.permutation(numTrainTestAll)
 indsTrain = randInds[0:numTrain]
 indsTest = randInds[numTrain:numTrainTestAll]
 
+Ydata = np.zeros(numTrainTestAll)
+for ind in range(numTrainTestAll):
+    Ydata[ind] = int(trainTestLabels[ind])
+
 if K.image_dim_ordering() == 'th':
     input_shape = (1, img_rows, img_cols,img_sli)
 else:
@@ -140,51 +144,6 @@ def dataGenerator2D(arrayIDs):
                 # print("ValidInd:" + str(ind))
                 yield (currentInput.astype('float32'))
 
-def lungProjectAlexNet():
-    inputs = Input(shape=(3,227,227))
-
-    conv_1 = Convolution2D(96, 11, 11, subsample=(4, 4), activation='relu',
-                           name='conv_1')(inputs)
-
-    conv_2 = MaxPooling2D((3, 3), strides=(2, 2))(conv_1)
-    conv_2 = crosschannelnormalization(name="convpool_1")(conv_2)
-    conv_2 = ZeroPadding2D((2, 2))(conv_2)
-    conv_2 = merge([
-                       Convolution2D(128, 5, 5, activation="relu", name='conv_2_' + str(i + 1))(
-                           splittensor(ratio_split=2, id_split=i)(conv_2)
-                       ) for i in range(2)], mode='concat', concat_axis=1, name="conv_2")
-
-    conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
-    conv_3 = crosschannelnormalization()(conv_3)
-    conv_3 = ZeroPadding2D((1, 1))(conv_3)
-    conv_3 = Convolution2D(384, 3, 3, activation='relu', name='conv_3')(conv_3)
-
-    conv_4 = ZeroPadding2D((1, 1))(conv_3)
-    conv_4 = merge([
-                       Convolution2D(192, 3, 3, activation="relu", name='conv_4_' + str(i + 1))(
-                           splittensor(ratio_split=2, id_split=i)(conv_4)
-                       ) for i in range(2)], mode='concat', concat_axis=1, name="conv_4")
-
-    conv_5 = ZeroPadding2D((1, 1))(conv_4)
-    conv_5 = merge([
-                       Convolution2D(128, 3, 3, activation="relu", name='conv_5_' + str(i + 1))(
-                           splittensor(ratio_split=2, id_split=i)(conv_5)
-                       ) for i in range(2)], mode='concat', concat_axis=1, name="conv_5")
-
-    dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name="convpool_5")(conv_5)
-    dense_1 = Flatten(name="flatten")(dense_1)
-    dense_1 = Dense(4096, activation='relu', name='dense_1')(dense_1)
-    dense_2 = Dropout(0.5)(dense_1)
-    dense_2 = Dense(4096, activation='relu', name='dense_2')(dense_2)
-    dense_3 = Dropout(0.5)(dense_2)
-    dense_3 = Dense(1000, name='dense_3')(dense_3)
-
-    prediction = dense_3
-    #prediction = Activation("softmax", name="softmax")(dense_3)
-
-    model = Model(input=inputs, output=prediction)
-
-    return model
 
 #Here is code from a 3D CNN example on the following blog:
 #   http://learnandshare645.blogspot.in/2016/06/3d-cnn-in-keras-action-recognition.html
@@ -193,12 +152,15 @@ def lungProjectAlexNet():
 #   http://machinelearningmastery.com/handwritten-digit-recognition-using-convolutional-neural-networks-python-keras/
 
 
-#alexmodel = convnet('alexnet')
-alexmodel = lungProjectAlexNet()
+alexmodel = convnet('alexnet')
+#alexmodel = lungProjectAlexNet()
 alexmodel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 
-validationDataAlexNet = alexmodel.predict_generator(dataGenerator2D(validationIDs),val_samples=len(validationIDs)*img_sli)
+print("Now predicting training/test data from AlexNet layers")
 trainTestDataAlex = alexmodel.predict_generator(dataGenerator2D(trainTestIDs),val_samples=len(trainTestIDs)*img_sli)
+
+print("Now predicting validation data from AlexNet layers")
+validationDataAlexNet = alexmodel.predict_generator(dataGenerator2D(validationIDs),val_samples=len(validationIDs)*img_sli)
 
 
 #	YVALIDPREDALEX WILL OUTPUT 19800X1000 ARRAY
@@ -224,13 +186,62 @@ trainTestDataAlex = alexmodel.predict_generator(dataGenerator2D(trainTestIDs),va
 #     if(sliceInd>=img_sli):
 #         sliceInd=0
 #         volInd=volInd+1
+print("Now resizing training and test data...")
+numValidPts = len(validationIDs)
+numTrainTestPts = len(trainTestIDs)
+numCat = 1000
+alexNetValid = np.zeros((numValidPts, img_sli,numCat))
+alexNetTrainTest = np.zeros((numTrainTestPts, img_sli,numCat))
+volInd=0
+sliceInd=0
+for ind in range(img_sli*numTrainTestPts):
+    if(volInd<numValidPts):
+        alexNetValid[volInd, sliceInd,:] = validationDataAlexNet[ind,:]
+    alexNetTrainTest[volInd, sliceInd,:] = trainTestDataAlex[ind, :]
+
+    sliceInd = sliceInd+1
+    if(sliceInd>=img_sli):
+        sliceInd=0
+        volInd=volInd+1
+
+alexTrain,alexTest,Ytrain,Ytest = train_test_split(alexNetTrainTest,Ydata,test_size=0.2,random_state=42)
+print("Now constructing the new CNN")
+postAlexModel = Sequential()
+
+postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
+                                border_mode='valid',
+                                input_shape=input_shape))
+postAlexModel.add(Activation('relu'))
+postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
+postAlexModel.add(Activation('relu'))
+postAlexModel.add(MaxPooling2D(pool_size=pool_size))
+postAlexModel.add(Dropout(0.25))
+
+postAlexModel.add(Flatten())
+postAlexModel.add(Dense(128))
+postAlexModel.add(Activation('relu'))
+postAlexModel.add(Dropout(0.5))
+postAlexModel.add(Dense(nb_classes))
+postAlexModel.add(Activation('softmax'))
+
+postAlexModel.compile(loss='categorical_crossentropy',
+                      optimizer='adadelta',
+                      metrics=['accuracy'])
+
+postAlexModel.fit(alexTrain, Ytrain, batch_size=batch_size, nb_epoch=nb_epoch,
+                  verbose=1, validation_data=(alexTest, Ytest))
+score = postAlexModel.evaluate(alexTest, Ytest, verbose=1)
+print('Test score:', score[0])
+print('Test accuracy:', score[1])
+prediction = postAlexModel.predict(validationDataAlexNet)
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionAlexNetFrom_'+st+'.mat'
 
 
-sio.savemat(fileName,mdict={'trainTestDataAlex':trainTestDataAlex,'validationDataAlexNet':validationDataAlexNet})
+
+sio.savemat(fileName,mdict={'score':score,'prediction':prediction})
 #sio.savemat(fileName,mdict={'alexNetTrainTestCats':alexNetTrainTestCats,'alexNetValidationCats':alexNetValidationCats})
 #sio.savemat(fileName,mdict={'alexNetValidationCats':alexNetValidationCats})
 
