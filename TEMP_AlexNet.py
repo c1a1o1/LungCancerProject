@@ -41,12 +41,13 @@ l2factor = 0#1e-5
 l1factor = 0#2e-7
 mil=True
 
-#alexmodel = convnet('alexnet', weights_path='alexnet_weights.h5', heatmap=False)
-alexmodel = convnet('alexnet', heatmap=False)
+alexmodel = convnet('alexnet', weights_path='alexnet_weights.h5', heatmap=False)
+#alexmodel = convnet('alexnet', heatmap=False)
 model = convnet('alexnet')
 for layer, mylayer in zip(alexmodel.layers, model.layers):
   print(layer.name)
-  if mylayer.name == 'mil_1':
+  #if mylayer.name == 'mil_1':
+  if mylayer.name == 'flatten':
     break
   else:
     weightsval = layer.get_weights()

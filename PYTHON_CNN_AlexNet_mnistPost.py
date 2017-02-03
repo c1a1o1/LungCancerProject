@@ -93,14 +93,12 @@ Ydata = np.zeros(numTrainTestAll)
 for ind in range(numTrainTestAll):
     Ydata[ind] = int(trainTestLabels[ind])
 
-numCat=4096
-numRowCol=64
 if K.image_dim_ordering() == 'th':
     input_shape = (1, img_rows, img_cols,img_sli)
-    input_shape2 = (1, img_sli, numRowCol,numRowCol )
+    input_shape2 = (1, img_sli, 1000 )
 else:
     input_shape = (img_rows, img_cols,img_sli, 1)
-    input_shape2 = (img_sli, numRowCol,numRowCol, 1)
+    input_shape2 = (img_sli, 1000, 1)
 
 def getVolData(patID):
     patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_" + patID + ".mat"
@@ -176,15 +174,15 @@ def myAlexNet(weights_path=None):
                            splittensor(ratio_split=2, id_split=i)(conv_5)
                        ) for i in range(2)], mode='concat', concat_axis=1, name="conv_5")
     dense_1 = MaxPooling2D((3, 3), strides=(2, 2), name="convpool_5")(conv_5)
-    #dense_1 = Flatten(name="flatten")(dense_1)
-    #dense_1 = Dense(4096, activation='relu', name='dense_1')(dense_1)
-    #dense_2 = Dropout(0.5)(dense_1)
-    #dense_2 = Dense(4096, activation='relu', name='dense_2')(dense_2)
+    dense_1 = Flatten(name="flatten")(dense_1)
+    dense_1 = Dense(4096, activation='relu', name='dense_1')(dense_1)
+    dense_2 = Dropout(0.5)(dense_1)
+    dense_2 = Dense(4096, activation='relu', name='dense_2')(dense_2)
     #dense_3 = Dropout(0.5)(dense_2)
     #dense_3 = Dense(1000, name='dense_3')(dense_3)
     # prediction = Activation("softmax", name="softmax")(dense_3)
     #model = Model(input=inputs, output=prediction)
-    model = Model(input=inputs, output=dense_1)
+    model = Model(input=inputs, output=dense_2)
     if weights_path:
         model.load_weights(weights_path)
     return model
@@ -224,7 +222,7 @@ st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/alexNetFeaturesFrom_'+st+'.mat'
 sio.savemat(fileName,mdict={'trainTestDataAlex':trainTestDataAlex,'validationDataAlexNet':validationDataAlexNet})
 """
-mat_contents = sio.loadmat('cnnPredictions/alexNetFeaturesFrom_layerOf4096.mat')
+mat_contents = sio.loadmat('cnnPredictions/alexNetFeaturesCurrent.mat')
 validationDataAlexNet = mat_contents['validationDataAlexNet']
 trainTestDataAlex = mat_contents['trainTestDataAlex']
 """
@@ -255,16 +253,16 @@ trainTestDataAlex = mat_contents['trainTestDataAlex']
 print("Now resizing training and test data...")
 numValidPts = len(validationIDs)
 numTrainTestPts = len(trainTestIDs)
-#numCat = 4096
-numRowCol = 64
-alexNetValid = np.zeros((numValidPts, img_sli,numRowCol,numRowCol))
-alexNetTrainTest = np.zeros((numTrainTestPts, img_sli,numRowCol,numRowCol))
+numCat = 1000
+alexNetValid = np.zeros((numValidPts, img_sli,numCat))
+alexNetTrainTest = np.zeros((numTrainTestPts, img_sli,numCat))
 volInd=0
 sliceInd=0
 for ind in range(img_sli*numTrainTestPts):
     if(volInd<numValidPts):
-        alexNetValid[volInd, sliceInd,:,:] = np.reshape(validationDataAlexNet[ind,:],(numRowCol,numRowCol))
-    alexNetTrainTest[volInd, sliceInd,:,:] = np.reshape(trainTestDataAlex[ind, :],(numRowCol,numRowCol))
+        alexNetValid[volInd, sliceInd,:] = validationDataAlexNet[ind,:]
+    alexNetTrainTest[volInd, sliceInd,:] = trainTestDataAlex[ind, :]
+
     sliceInd = sliceInd+1
     if(sliceInd>=img_sli):
         sliceInd=0
@@ -276,28 +274,38 @@ Ytrain = np_utils.to_categorical(Ytrain, nb_classes)
 Ytest = np_utils.to_categorical(Ytest, nb_classes)
 
 if K.image_dim_ordering() == 'th':
-    alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, numRowCol,numRowCol)
-    alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, numRowCol,numRowCol)
-    alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, numRowCol,numRowCol)
-    input_shape = (1, img_sli, numRowCol,numRowCol)
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, numCat)
+    alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, numCat)
+    alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, numCat)
+    input_shape = (1, img_sli, 1000)
 else:
-    alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, numRowCol,numRowCol, 1)
-    alexTest = alexTest.reshape(alexTest.shape[0], img_sli, numRowCol,numRowCol, 1)
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, 1000, 1)
+    alexTest = alexTest.reshape(alexTest.shape[0], img_sli, 1000, 1)
     alexNetValid = alexNetValid.reshape(alexNetValid.shape[0], img_sli, numCat, 1)
-    input_shape = (img_sli, numRowCol,numRowCol, 1)
+    input_shape = (img_sli, 1000, 1)
 
 print("Now constructing the new CNN")
 postAlexModel = Sequential()
-postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1], kernel_size[2],
-                        border_mode='valid',
-                        input_shape=input_shape))
-postAlexModel.add(MaxPooling3D(pool_size=pool_size))
-postAlexModel.add(Dropout(0.2))
+
+postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
+                                border_mode='valid',
+                                input_shape=input_shape2))
+postAlexModel.add(Activation('relu'))
+postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
+postAlexModel.add(Activation('relu'))
+postAlexModel.add(MaxPooling2D(pool_size=pool_size2))
+postAlexModel.add(Dropout(0.25))
+
 postAlexModel.add(Flatten())
-# model.add(Dense(128, init='normal',activation='relu'))
-postAlexModel.add(Dense(16, init='normal', activation='sigmoid'))
-postAlexModel.add(Dense(nb_classes, init='normal', activation='softmax'))
-postAlexModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+postAlexModel.add(Dense(128))
+postAlexModel.add(Activation('relu'))
+postAlexModel.add(Dropout(0.5))
+postAlexModel.add(Dense(nb_classes))
+postAlexModel.add(Activation('softmax'))
+
+postAlexModel.compile(loss='categorical_crossentropy',
+                      optimizer='adadelta',
+                      metrics=['accuracy'])
 
 postAlexModel.fit(alexTrain, Ytrain, batch_size=batch_size, nb_epoch=nb_epoch,
                   verbose=1, validation_data=(alexTest, Ytest))
