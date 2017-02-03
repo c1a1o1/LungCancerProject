@@ -32,7 +32,7 @@ submit = prediction(:,2);
 load('stage1_validationIDs.mat');
 load('stage1_labelsMAT.mat');
 
-fileID = fopen('submission_alexNet4.csv','w');
+fileID = fopen('submission_alexNet5.csv','w');
 fprintf(fileID,'id,cancer\n');
 for i = 1:length(id)
     fprintf(fileID,'%s,%d\n',id{i},submit(i));

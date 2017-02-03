@@ -145,40 +145,42 @@ def dataGenerator2D(arrayIDs):
 
 
 print("Currently loading validation data")
-alexNetValid = np.load('transferData/alexNet2DValidation_current.npy')
+alexNetValid = np.load('transferData/alexNet3DValidation_current.npy')
 print('Validation Array Loaded')
 print(alexNetValid.shape)
 print('Currently loading train test data...')
-alexNetTrainTest = np.load('transferData/alexNet2DTrainTest_current.npy')
+alexNetTrainTest = np.load('transferData/alexNet3DTrainTest_current.npy')
 print('Training and Test Data loaded')
 print(alexNetTrainTest.shape)
 
-numCat = alexNetTrainTest.shape[2]
+numRow = alexNetValid.shape[2]
+numCol = alexNetValid.shape[3]
 alexTrain,alexTest,Ytrain,Ytest = train_test_split(alexNetTrainTest,Ydata,test_size=0.2,random_state=42)
 
 Ytrain = np_utils.to_categorical(Ytrain, nb_classes)
 Ytest = np_utils.to_categorical(Ytest, nb_classes)
 
 if K.image_dim_ordering() == 'th':
-    alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, numCat)
-    alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, numCat)
-    alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, numCat)
-    input_shape = (1, img_sli, numCat)
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, numRow,numCol)
+    alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, numRow,numCol)
+    alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, numRow,numCol)
+    input_shape = (1, img_sli, numRow,numCol)
 else:
-    alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, 1000, 1)
-    alexTest = alexTest.reshape(alexTest.shape[0], img_sli, 1000, 1)
-    alexNetValid = alexNetValid.reshape(alexNetValid.shape[0], img_sli, numCat, 1)
-    input_shape = (img_sli, numCat, 1)
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, numRow,numCol, 1)
+    alexTest = alexTest.reshape(alexTest.shape[0], img_sli, numRow,numCol, 1)
+    alexNetValid = alexNetValid.reshape(alexNetValid.shape[0], img_sli, numRow,numCol, 1)
+    input_shape = (img_sli, numRow,numCol, 1)
 
 print("Now constructing the new CNN")
 postAlexModel = Sequential()
 
-postAlexModel.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
+postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
                         border_mode='valid',
                         input_shape=input_shape))
-postAlexModel.add(MaxPooling2D(pool_size=pool_size2))
+postAlexModel.add(MaxPooling3D(pool_size=pool_size))
 postAlexModel.add(Dropout(0.2))
 postAlexModel.add(Flatten())
+#model.add(Dense(128, init='normal',activation='relu'))
 postAlexModel.add(Dense(16, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(nb_classes, init='normal',activation='softmax'))
 postAlexModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
@@ -193,25 +195,4 @@ prediction = postAlexModel.predict(alexNetValid)
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionAlexNetFrom_'+st+'.mat'
-
-
-
 sio.savemat(fileName,mdict={'score':score,'prediction':prediction})
-#sio.savemat(fileName,mdict={'alexNetTrainTestCats':alexNetTrainTestCats,'alexNetValidationCats':alexNetValidationCats})
-#sio.savemat(fileName,mdict={'alexNetValidationCats':alexNetValidationCats})
-
-
-"""
-sio.savemat('RES_randomProj.mat',mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
-
-Yvalid = YvalidP[:,1]
-
-with open('submissionRandProjRandomForest.csv', 'w') as csvfile:
-    fieldnames = ['id', 'cancer']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-    writer.writeheader()
-    for ind in range(numValid):
-        writer.writerow({'id': validationIDs[ind], 'cancer': str(Yvalid[ind])})
-
-"""
