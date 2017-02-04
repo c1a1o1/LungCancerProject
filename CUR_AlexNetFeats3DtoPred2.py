@@ -45,7 +45,7 @@ from convnetskeras.imagenet_tool import synset_to_id, id_to_synset,synset_to_dfs
 
 batch_size = 20
 nb_classes = 2
-nb_epoch = 1
+nb_epoch = 3
 
 # input image dimensions
 img_rows = 256
@@ -230,19 +230,31 @@ postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kerne
                         input_shape=input_shape))
 postAlexModel.add(MaxPooling3D(pool_size=pool_size))
 postAlexModel.add(Dropout(0.2))
+postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
+                        border_mode='valid',
+                        input_shape=input_shape))
+postAlexModel.add(MaxPooling3D(pool_size=pool_size))
+postAlexModel.add(Dropout(0.2))
+postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
+                        border_mode='valid',
+                        input_shape=input_shape))
+postAlexModel.add(MaxPooling3D(pool_size=pool_size))
+postAlexModel.add(Dropout(0.2))
 postAlexModel.add(Flatten())
-#model.add(Dense(128, init='normal',activation='relu'))
+postAlexModel.add(Dense(4096, init='normal',activation='softmax'))
+postAlexModel.add(Dense(4096, init='normal',activation='softmax'))
+postAlexModel.add(Dense(128, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(16, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(nb_classes, init='normal',activation='softmax'))
 postAlexModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 
 postAlexModel.fit_generator(alexNetDataGenerator(trainTestIDs, trainTestLabels, indsTrain),
-                                samples_per_epoch = 100, nb_val_samples = 50
+                                samples_per_epoch = len(indsTrain), nb_val_samples = 100
                             , nb_epoch=nb_epoch,verbose=1,
                             validation_data=alexNetDataGenerator(trainTestIDs, trainTestLabels, indsTest))
 prediction = postAlexModel.predict_generator(alexNetValidData(),val_samples=len(validationIDs))
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-fileName = 'cnnPredictions/cnnPredictionAlexNet3D_1_'+st+'.mat'
+fileName = 'cnnPredictions/cnnPredictionAlexNet3D_2_'+st+'.mat'
 sio.savemat(fileName,mdict={'prediction':prediction})

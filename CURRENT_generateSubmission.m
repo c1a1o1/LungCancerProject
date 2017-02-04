@@ -32,11 +32,11 @@ submit = prediction(:,2);
 
 %normalize and center predictions to scores between 0 and 1
 submit2 = (submit-min(submit))./(max(submit)-min(submit));
-
+%%
 load('stage1_validationIDs.mat');
 load('stage1_labelsMAT.mat');
 
-fileID = fopen('submission_rescaledScores.csv','w');
+fileID = fopen('submission_cnn3Dearly.csv','w');
 fprintf(fileID,'id,cancer\n');
 for i = 1:length(id)
     fprintf(fileID,'%s,%d\n',id{i},submit2(i));
