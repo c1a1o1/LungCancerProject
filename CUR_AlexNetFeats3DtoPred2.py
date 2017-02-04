@@ -58,7 +58,7 @@ nb_filters = 10
 pool_size = (5,5,5)
 pool_size2 = (5,5)
 # convolution kernel size
-kernel_size = (4,4,4)
+kernel_size = (5,5,5)
 
 matFiles = []
 trainTestIDs = []
@@ -230,19 +230,19 @@ postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kerne
                         input_shape=input_shape))
 postAlexModel.add(MaxPooling3D(pool_size=pool_size))
 postAlexModel.add(Dropout(0.2))
-postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
-                        border_mode='valid',
-                        input_shape=input_shape))
-postAlexModel.add(MaxPooling3D(pool_size=pool_size))
-postAlexModel.add(Dropout(0.2))
-postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
-                        border_mode='valid',
-                        input_shape=input_shape))
-postAlexModel.add(MaxPooling3D(pool_size=pool_size))
-postAlexModel.add(Dropout(0.2))
+# postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
+#                         border_mode='valid',
+#                         input_shape=input_shape))
+# postAlexModel.add(MaxPooling3D(pool_size=pool_size))
+# postAlexModel.add(Dropout(0.2))
+# postAlexModel.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
+#                         border_mode='valid',
+#                         input_shape=input_shape))
+# postAlexModel.add(MaxPooling3D(pool_size=pool_size))
+# postAlexModel.add(Dropout(0.2))
 postAlexModel.add(Flatten())
-postAlexModel.add(Dense(4096, init='normal',activation='softmax'))
-postAlexModel.add(Dense(4096, init='normal',activation='softmax'))
+#postAlexModel.add(Dense(4096, init='normal',activation='sigmoid'))
+#postAlexModel.add(Dense(4096, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(128, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(16, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(nb_classes, init='normal',activation='softmax'))
