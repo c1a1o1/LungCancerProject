@@ -101,11 +101,6 @@ def getVolData(patID):
     volData = curMATcontent["resizedDCM"]
     return volData.astype('float32')
 
-def getAlexNet3Dfeats(patID):
-    alexNetFile = '/home/zdestefa/AlexNetFeatures/feats3D_conv3_'+patID+'.npy'
-    return np.load(alexNetFile)
-
-
 def dataGenerator(patIDnumbers, patLabels, indsUse):
     while 1:
         for ind in range(len(indsUse)):
@@ -148,78 +143,32 @@ def dataGenerator2D(arrayIDs):
                 # print("ValidInd:" + str(ind))
                 yield (currentInput.astype('float32'))
 
-def alexNetDataGenerator(patIDnumbers,patLabels,indsUse):
-    while 1:
-        for ind in range(len(indsUse)):
-            print("Currently at ind: " + str(ind) + " of " + str(len(indsUse)))
-            patID = patIDnumbers[indsUse[ind]]
-            alexData = getAlexNet3Dfeats(patID)
-            numRow = alexData.shape[1]
-            numCol = alexData.shape[2]
-            if K.image_dim_ordering() == 'th':
-                alexData = alexData.reshape(1, 1, img_sli, numRow, numCol)
-            else:
-                alexData = alexData.reshape(1, img_sli, numRow, numCol,1)
-            YCur = int(patLabels[indsUse[ind]])
-            YUse = np_utils.to_categorical(YCur, nb_classes)
-            yield (alexData.astype('float32'), YUse)
 
-def alexNetValidData():
-    while 1:
-        for ind in range(len(validationIDs)):
-            print("Currently at ind: " + str(ind) + " of " + str(len(validationIDs)))
-            patID = validationIDs[ind]
-            alexData = getAlexNet3Dfeats(patID)
-            numRow = alexData.shape[1]
-            numCol = alexData.shape[2]
-            if K.image_dim_ordering() == 'th':
-                alexData = alexData.reshape(1, 1, img_sli, numRow, numCol)
-            else:
-                alexData = alexData.reshape(1, img_sli, numRow, numCol,1)
-            yield (alexData.astype('float32'))
+print("Currently loading validation data")
+alexNetValid = np.load('transferData/alexNet3DValidation_current.npy')
+print('Validation Array Loaded')
+print(alexNetValid.shape)
+print('Currently loading train test data...')
+alexNetTrainTest = np.load('transferData/alexNet3DTrainTest_current.npy')
+print('Training and Test Data loaded')
+print(alexNetTrainTest.shape)
 
+numRow = alexNetValid.shape[2]
+numCol = alexNetValid.shape[3]
+alexTrain,alexTest,Ytrain,Ytest = train_test_split(alexNetTrainTest,Ydata,test_size=0.2,random_state=42)
 
-#TODO: CHANGE WHEN DONE TESTING
-trainingRatio = 0.90
-numTrainTestAll = len(trainTestIDs)
-#numTrainTestAll = 100
+Ytrain = np_utils.to_categorical(Ytrain, nb_classes)
+Ytest = np_utils.to_categorical(Ytest, nb_classes)
 
-numTrain = int(np.floor(trainingRatio*numTrainTestAll))
-numTest = numTrainTestAll-numTrain
-numValid = len(validationIDs)
-
-randInds = np.random.permutation(numTrainTestAll)
-indsTrain = randInds[0:numTrain]
-indsTest = randInds[numTrain:numTrainTestAll]
-
-# print("Currently loading validation data")
-# alexNetValid = np.load('transferData/alexNet3DValidation_current.npy')
-# print('Validation Array Loaded')
-# print(alexNetValid.shape)
-# print('Currently loading train test data...')
-# alexNetTrainTest = np.load('transferData/alexNet3DTrainTest_current.npy')
-# print('Training and Test Data loaded')
-# print(alexNetTrainTest.shape)
-#
-# numRow = alexNetValid.shape[2]
-# numCol = alexNetValid.shape[3]
-# alexTrain,alexTest,Ytrain,Ytest = train_test_split(alexNetTrainTest,Ydata,test_size=0.2,random_state=42)
-
-# Ytrain = np_utils.to_categorical(Ytrain, nb_classes)
-# Ytest = np_utils.to_categorical(Ytest, nb_classes)
-
-sampleFeats = getAlexNet3Dfeats(validationIDs[1])
-numRow=sampleFeats.shape[1]
-numCol=sampleFeats.shape[2]
 if K.image_dim_ordering() == 'th':
-    # alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, numRow,numCol)
-    # alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, numRow,numCol)
-    # alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, numRow,numCol)
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], 1, img_sli, numRow,numCol)
+    alexTest = alexTest.reshape(alexTest.shape[0], 1, img_sli, numRow,numCol)
+    alexNetValid=alexNetValid.reshape(alexNetValid.shape[0], 1, img_sli, numRow,numCol)
     input_shape = (1, img_sli, numRow,numCol)
 else:
-    # alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, numRow,numCol, 1)
-    # alexTest = alexTest.reshape(alexTest.shape[0], img_sli, numRow,numCol, 1)
-    # alexNetValid = alexNetValid.reshape(alexNetValid.shape[0], img_sli, numRow,numCol, 1)
+    alexTrain = alexTrain.reshape(alexTrain.shape[0], img_sli, numRow,numCol, 1)
+    alexTest = alexTest.reshape(alexTest.shape[0], img_sli, numRow,numCol, 1)
+    alexNetValid = alexNetValid.reshape(alexNetValid.shape[0], img_sli, numRow,numCol, 1)
     input_shape = (img_sli, numRow,numCol, 1)
 
 print("Now constructing the new CNN")
@@ -236,13 +185,14 @@ postAlexModel.add(Dense(16, init='normal',activation='sigmoid'))
 postAlexModel.add(Dense(nb_classes, init='normal',activation='softmax'))
 postAlexModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 
-postAlexModel.fit_generator(alexNetDataGenerator(trainTestIDs, trainTestLabels, indsTrain),
-                                samples_per_epoch = 1000, nb_val_samples = 100
-                            , nb_epoch=nb_epoch,verbose=1,
-                            validation_data=alexNetDataGenerator(trainTestIDs, trainTestLabels, indsTest))
-prediction = postAlexModel.predict_generator(alexNetValidData(),val_samples=len(validationIDs))
+postAlexModel.fit(alexTrain, Ytrain, batch_size=batch_size, nb_epoch=nb_epoch,
+                  verbose=1, validation_data=(alexTest, Ytest))
+score = postAlexModel.evaluate(alexTest, Ytest, verbose=1)
+print('Test score:', score[0])
+print('Test accuracy:', score[1])
+prediction = postAlexModel.predict(alexNetValid)
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'cnnPredictions/cnnPredictionAlexNetFrom_'+st+'.mat'
-sio.savemat(fileName,mdict={'prediction':prediction})
+sio.savemat(fileName,mdict={'score':score,'prediction':prediction})
