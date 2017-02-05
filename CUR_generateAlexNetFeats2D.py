@@ -211,33 +211,51 @@ ourAlexModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=[
 
 #TODO CHANGE THIS TO DEPEND ON WHETHER ALEXNET HAS WEIGHTS
 
-print("Now predicting training/test data from AlexNet layers")
-trainTestDataAlex = ourAlexModel.predict_generator(dataGenerator2D(trainTestIDs),val_samples=len(trainTestIDs)*img_sli)
+# print("Now predicting training/test data from AlexNet layers")
+# trainTestDataAlex = ourAlexModel.predict_generator(dataGenerator2D(trainTestIDs),val_samples=len(trainTestIDs)*img_sli)
+#
+# print("Now predicting validation data from AlexNet layers")
+# validationDataAlexNet = ourAlexModel.predict_generator(dataGenerator2D(validationIDs),val_samples=len(validationIDs)*img_sli)
+#
+# print("Now resizing training and test data...")
+# numValidPts = len(validationIDs)
+# numTrainTestPts = len(trainTestIDs)
+# numCat = validationDataAlexNet.shape[1]
+# alexNetValid = np.zeros((numValidPts, img_sli,numCat))
+# alexNetTrainTest = np.zeros((numTrainTestPts, img_sli,numCat))
+# volInd=0
+# sliceInd=0
+# for ind in range(img_sli*numTrainTestPts):
+#     if(volInd<numValidPts):
+#         alexNetValid[volInd, sliceInd,:] = validationDataAlexNet[ind,:]
+#     alexNetTrainTest[volInd, sliceInd,:] = trainTestDataAlex[ind, :]
+#
+#     sliceInd = sliceInd+1
+#     if(sliceInd>=img_sli):
+#         sliceInd=0
+#         volInd=volInd+1
+#
+# ts = time.time()
+# st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
+# fileName1 = 'transferData/alexNet2DTrainTest_'+st+'.npy'
+# fileName2 = 'transferData/alexNet2DValidation_'+st+'.npy'
+# np.save(fileName1,alexNetTrainTest)
+# np.save(fileName2,alexNetValid)
 
-print("Now predicting validation data from AlexNet layers")
-validationDataAlexNet = ourAlexModel.predict_generator(dataGenerator2D(validationIDs),val_samples=len(validationIDs)*img_sli)
+def generate2DFeaturesForPatient(patID):
+    patient = []
+    patient.append(patID)
+    featureDataAlexNet = ourAlexModel.predict_generator(dataGenerator2D(patient),val_samples=img_sli)
+    fileNm = 'AlexNetFeatures2D/feats2D_4096layer_'+patID+'.npy'
+    fileNm2 = 'AlexNetFeats2DMatlab/feats2D_4096layer_mat_' + patID + '.mat'
+    sio.savemat(fileNm2, mdict={'featureDataAlexNet': featureDataAlexNet})
+    #np.save(fileNm,featureDataAlexNet)
 
-print("Now resizing training and test data...")
-numValidPts = len(validationIDs)
-numTrainTestPts = len(trainTestIDs)
-numCat = validationDataAlexNet.shape[1]
-alexNetValid = np.zeros((numValidPts, img_sli,numCat))
-alexNetTrainTest = np.zeros((numTrainTestPts, img_sli,numCat))
-volInd=0
-sliceInd=0
-for ind in range(img_sli*numTrainTestPts):
-    if(volInd<numValidPts):
-        alexNetValid[volInd, sliceInd,:] = validationDataAlexNet[ind,:]
-    alexNetTrainTest[volInd, sliceInd,:] = trainTestDataAlex[ind, :]
 
-    sliceInd = sliceInd+1
-    if(sliceInd>=img_sli):
-        sliceInd=0
-        volInd=volInd+1
+for valInd in range(len(validationIDs)):
+    print('Now processing validation volume ' + str(valInd) + ' of ' + str(len(validationIDs)))
+    generate2DFeaturesForPatient(validationIDs[valInd])
 
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-fileName1 = 'transferData/alexNet2DTrainTest_'+st+'.npy'
-fileName2 = 'transferData/alexNet2DValidation_'+st+'.npy'
-np.save(fileName1,alexNetTrainTest)
-np.save(fileName2,alexNetValid)
+for sInd in range(len(trainTestIDs)):
+    print('Now processing train/test volume ' + str(sInd) + ' of ' + str(len(trainTestIDs)))
+    generate2DFeaturesForPatient(trainTestIDs[sInd])
