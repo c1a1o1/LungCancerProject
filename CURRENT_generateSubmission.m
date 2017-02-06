@@ -20,6 +20,8 @@ legend('Accu vs Thresh','False Pos Vs Thresh','False Neg vs Thresh')
 %thresh=0.3;
 %submit = int16(YvalidP(:,2)>0.3);
 submit = yValidPred(:,2);
+%%
+submit = YvalidP(:,2);
 
 %%
 

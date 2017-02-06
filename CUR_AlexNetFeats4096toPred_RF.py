@@ -111,7 +111,7 @@ decoded = Dense(4096, activation='sigmoid')(encoded)
 # this model maps an input to its reconstruction
 autoencoder = Model(input=input_img, output=decoded)
 autoencoder.compile(optimizer='adadelta', loss='mse')
-
+"""
 autoencoder.fit(Xtrain, Xtrain,
                 nb_epoch=100,
                 batch_size=256,
@@ -130,7 +130,7 @@ np.save('temp/trainTestAutoencoded2.npy',trainTestEncoded)
 """
 validationEncoded = np.load('temp/validationAutoencoded2.npy')
 trainTestEncoded = np.load('temp/trainTestAutoencoded2.npy')
-"""
+
 
 newTrainTest = np.zeros((numTrainTest,6400))
 newValidation = np.zeros((numValid,6400))
@@ -149,28 +149,20 @@ for kk in range(len(validationIDs)):
 
 XtrainNew,XtestNew,Ytrain2,Ytest2 = train_test_split(newTrainTest,trainTestLabels,test_size=0.1,random_state=42)
 
-Ytest2 = np_utils.to_categorical(Ytest2, nb_classes)
-Ytrain2 = np_utils.to_categorical(Ytrain2, nb_classes)
 
+clf = RandomForestClassifier(max_depth=10, n_estimators=20, max_features=100)
+clf = clf.fit(XtrainNew,Ytrain2)
 
-input_img2 = Input(shape=(6400,))
-layer1 = Dense(256, init='normal', activation='sigmoid')(input_img2)
-layer2 = Dense(128, init='normal', activation='sigmoid')(layer1)
-layer3 = Dense(32, init='normal',activation='relu')(layer2)
-outputLayer = Dense(nb_classes, init='normal',activation='softmax')(layer3)
+yHatTrainP = clf.predict_proba(XtrainNew)
+yHatTestP = clf.predict_proba(XtestNew)
+YvalidP = clf.predict_proba(newValidation)
 
-post4096Model = Model(input = input_img2,output=outputLayer)
-post4096Model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-
-post4096Model.fit(XtrainNew, Ytrain2, batch_size=500, nb_epoch=50,
-                  verbose=1, validation_data=(XtestNew, Ytest2))
-
-prediction = post4096Model.predict(newValidation)
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-fileName = 'cnnPredictions/cnnPredictionAlexNet4096From_'+st+'.mat'
-sio.savemat(fileName,mdict={'prediction':prediction})
+fileName = 'cnnPredictions/PredictionAlexNet4096_RF_'+st+'.mat'
+sio.savemat(fileName,mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,
+                   'YvalidP':YvalidP,'Ytrain':Ytrain2,'Ytest':Ytest2})
 
 """
 
