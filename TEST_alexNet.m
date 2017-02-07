@@ -21,3 +21,12 @@ predictions = reshape(predictions,198,1000);
 h5write('myfile.h5', '/DS1', layers)
 
 h5disp('myfile.h5')
+
+%%
+
+
+for i = 1:10
+    figure
+    curX = xsample(i,:);
+    imagesc(reshape(curX,80,80)); colorbar;
+end

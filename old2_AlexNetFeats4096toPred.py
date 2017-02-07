@@ -127,7 +127,7 @@ sio.savemat('autoencodingPrediction.mat',
 
 np.save('temp/validationAutoencoded2.npy',validationEncoded)
 np.save('temp/trainTestAutoencoded2.npy',trainTestEncoded)
-
+"""
 validationEncoded = np.load('temp/validationAutoencoded2.npy')
 trainTestEncoded = np.load('temp/trainTestAutoencoded2.npy')
 
@@ -149,82 +149,10 @@ for kk in range(len(validationIDs)):
 
 XtrainNew,XtestNew,Ytrain2,Ytest2 = train_test_split(newTrainTest,trainTestLabels,test_size=0.1,random_state=42)
 
-sio.savemat('sample4096feats.mat',
-            mdict={'newTrainTest':newTrainTest,
-                   'newValidation':newValidation})
-# this is our input placeholder
-input_img3 = Input(shape=(6400,))
-encoded2 = Dense(512, activation='sigmoid')(input_img3)
-decoded2 = Dense(6400, activation='sigmoid')(encoded2)
-
-# this model maps an input to its reconstruction
-autoencoder2 = Model(input=input_img3, output=decoded2)
-autoencoder2.compile(optimizer='sgd', loss='mae')
-
-autoencoder2.fit(newTrainTest, newTrainTest,
-                nb_epoch=1000,
-                batch_size=256,
-                shuffle=True,
-                validation_data=(newValidation, newValidation))
-
-encoder = Model(input=input_img3, output=encoded2)
-validationEncoded3 = encoder.predict(newValidation)
-trainTestEncoded3 = encoder.predict(newTrainTest)
-
-validationRecon = autoencoder2.predict(newValidation)
-trainTestRecon = autoencoder2.predict(newTrainTest)
-
-np.save('temp/validationAutoencoded3.npy',validationEncoded3)
-np.save('temp/trainTestAutoencoded3.npy',trainTestEncoded3)
-
-sio.savemat('xData6400autoencoded.mat',
-            mdict={'validationRecon':validationRecon,'trainTestRecon':trainTestRecon,
-            'trainTestEncoded3':trainTestEncoded3, 'validationEncoded3':validationEncoded3})
-"""
-
-curMATcontent = sio.loadmat('newXfromPCA_500dim.mat')
-xTrainTestValidPCA = curMATcontent["xOutput500dim"]
-xTrainTestPCA = xTrainTestValidPCA[0:numTrainTest,:]
-xValidPCA = xTrainTestValidPCA[numTrainTest:(numTrainTest+numValid),:]
-XtrainNewPCA,XtestNewPCA,Ytrain2,Ytest2 = train_test_split(xTrainTestPCA,trainTestLabels,test_size=0.1,random_state=42)
-
 Ytest2 = np_utils.to_categorical(Ytest2, nb_classes)
 Ytrain2 = np_utils.to_categorical(Ytrain2, nb_classes)
 
-"""
-clf = RandomForestClassifier(max_depth=10, n_estimators=20, max_features=100)
-clf = clf.fit(XtrainNewPCA,Ytrain2)
-print('train set score:' + str(clf.score(XtrainNewPCA,Ytrain2)))
-print('test set score:' + str(clf.score(XtestNewPCA,Ytest2)))
-YvalidP = clf.predict_proba(xValidPCA)
-"""
 
-input_img2 = Input(shape=(500,))
-layer1 = Dense(100, init='normal', activation='relu')(input_img2)
-layer2 = Dense(50, init='normal', activation='sigmoid')(layer1)
-outputLayer = Dense(nb_classes, init='normal',activation='softmax')(layer2)
-
-post4096Model = Model(input = input_img2,output=outputLayer)
-post4096Model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-
-post4096Model.fit(XtrainNewPCA, Ytrain2, batch_size=500, nb_epoch=100,
-                  verbose=1, validation_data=(XtestNewPCA, Ytest2))
-YvalidP = post4096Model.predict(xValidPCA)
-
-
-ptPrediction = YvalidP[:,1]
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-fileName = 'submissions/kagglePredFrom_'+st+'.csv'
-
-with open(fileName, 'w') as csvfile:
-    fieldnames = ['id', 'cancer']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-    writer.writeheader()
-    for ind in range(numValid):
-        writer.writerow({'id': validationIDs[ind], 'cancer': str(ptPrediction[ind])})
-"""
 input_img2 = Input(shape=(6400,))
 layer1 = Dense(512, init='normal', activation='relu')(input_img2)
 layer2 = Dense(512, init='normal', activation='sigmoid')(layer1)
@@ -252,7 +180,7 @@ with open(fileName, 'w') as csvfile:
     for ind in range(numValid):
         writer.writerow({'id': validationIDs[ind], 'cancer': str(ptPrediction[ind])})
 
-
+"""
 
 yHatTrainP = regr.predict_proba(Xtrain)
 yHatTestP = regr.predict_proba(Xtest)

@@ -101,60 +101,50 @@ Ytest2 = np_utils.to_categorical(Ytest, nb_classes)
 Ytrain2 = np_utils.to_categorical(Ytrain, nb_classes)
 
 input_img = Input(shape=(4096,))
-layer2 = Dense(128,activation='sigmoid')(input_img)
-logisticLayer = Dense(2,activation='sigmoid')(layer2)
-"""
+#layer2 = Dense(128,activation='sigmoid')(input_img)
+#logisticLayer = Dense(2,activation='sigmoid')(layer2)
+logisticLayer = Dense(2,activation='sigmoid')(input_img)
+
 logRegress = Model(input=input_img,output=logisticLayer)
 logRegress.compile(optimizer='adadelta', loss='mse')
 logRegress.fit(Xtrain, Ytrain2,
-                nb_epoch=150,
+                nb_epoch=200,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(Xtest, Ytest2))
 
 slicePrediction = logRegress.predict(Xvalid)
-sliceTest = logRegress.predict(Xtest)
-sliceTrain = logRegress.predict(Xtrain)
+sliceTrainTest = logRegress.predict(xTrainTest)
 
 np.save('temp/slicePrediction.npy',slicePrediction)
-np.save('temp/sliceTest.npy',sliceTest)
-np.save('temp/sliceTrain.npy',sliceTrain)
+np.save('temp/sliceTrainTest.npy',sliceTrainTest)
 """
 
 slicePrediction = np.load('temp/slicePrediction.npy')
-sliceTest = np.load('temp/sliceTest.npy')
-sliceTrain = np.load('temp/sliceTrain.npy')
-
+sliceTrainTest = np.load('temp/sliceTrainTest.npy')
+"""
 ptPrediction = np.zeros((numValid))
 for kk in range(numValid):
     startInd = kk * 100
     endInd = (kk + 1) * 100
     sliceProbs = slicePrediction[startInd:endInd, 1]
     ptPrediction[kk] = np.max(sliceProbs)
-"""
-ptTest = np.zeros((len(Ytest)))
-for kk in range(len(Ytest)):
+
+ptTrainTest = np.zeros((numTrainTest))
+ptTarget = np.zeros((numTrainTest))
+for kk in range(numTrainTest):
     startInd = kk * 100
     endInd = (kk + 1) * 100
-    sliceProbs = sliceTest[startInd:endInd, 1]
-    ptTest[kk] = np.max(sliceProbs)
+    sliceProbs = sliceTrainTest[startInd:endInd, 1]
+    ptTrainTest[kk] = np.max(sliceProbs)
+    ptTarget[kk] = trainTestLabels[kk]
 
-ptTrain = np.zeros((len(Ytrain)))
-for kk in range(len(Ytrain)):
-    startInd = kk * 100
-    endInd = (kk + 1) * 100
-    sliceProbs = sliceTrain[startInd:endInd, 1]
-    ptTrain[kk] = np.max(sliceProbs)
 
-def calcMSE(predArray,targetArray):
-    return np.sum(np.square(np.abs(np.subtract(predArray,targetArray))))
 
-mseTest = calcMSE(ptTest,Ytest)
-mseTrain = calcMSE(ptTrain,Ytrain)
+mseTrainTest = ((ptTrainTest-ptTarget)**2).mean()
 
-print('Training MSE:' + str(mseTrain))
-print('Test MSE:' + str(mseTest))
-"""
+print('Training,Test MSE:' + str(mseTrainTest))
+
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
 fileName = 'submissions/kagglePredFrom_'+st+'.csv'
