@@ -188,8 +188,8 @@ xTrainTestPCA = xTrainTestValidPCA[0:numTrainTest,:]
 xValidPCA = xTrainTestValidPCA[numTrainTest:(numTrainTest+numValid),:]
 XtrainNewPCA,XtestNewPCA,Ytrain2,Ytest2 = train_test_split(xTrainTestPCA,trainTestLabels,test_size=0.1,random_state=42)
 
-Ytest2 = np_utils.to_categorical(Ytest2, nb_classes)
-Ytrain2 = np_utils.to_categorical(Ytrain2, nb_classes)
+Ytest2A = np_utils.to_categorical(Ytest2, nb_classes)
+Ytrain2A = np_utils.to_categorical(Ytrain2, nb_classes)
 
 """
 clf = RandomForestClassifier(max_depth=10, n_estimators=20, max_features=100)
@@ -198,17 +198,14 @@ print('train set score:' + str(clf.score(XtrainNewPCA,Ytrain2)))
 print('test set score:' + str(clf.score(XtestNewPCA,Ytest2)))
 YvalidP = clf.predict_proba(xValidPCA)
 """
-
 input_img2 = Input(shape=(500,))
 layer1 = Dense(100, init='normal', activation='relu')(input_img2)
 layer2 = Dense(50, init='normal', activation='sigmoid')(layer1)
 outputLayer = Dense(nb_classes, init='normal',activation='softmax')(layer2)
-
 post4096Model = Model(input = input_img2,output=outputLayer)
 post4096Model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-
-post4096Model.fit(XtrainNewPCA, Ytrain2, batch_size=500, nb_epoch=100,
-                  verbose=1, validation_data=(XtestNewPCA, Ytest2))
+post4096Model.fit(XtrainNewPCA, Ytrain2A, batch_size=500, nb_epoch=100,
+                  verbose=1, validation_data=(XtestNewPCA, Ytest2A))
 YvalidP = post4096Model.predict(xValidPCA)
 
 
