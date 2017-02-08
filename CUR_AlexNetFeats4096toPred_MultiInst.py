@@ -73,77 +73,68 @@ with open('stage1_sample_submission.csv') as csvfile:
 
 numTrainTest = len(trainTestIDs)
 numValid = len(validationIDs)
-Xvalid = np.zeros((numValid*100,4096))
-xTrainTest = np.zeros((numTrainTest*100,4096))
-yTrainTest = np.zeros((numTrainTest*100))
+
+Xvalid = np.zeros((numValid,100,4096))
+xTrainTest = np.zeros((numTrainTest,100,4096))
+yTrainTest = np.zeros((numTrainTest))
 
 print('Loading Train/Test Set')
 for kk in range(len(trainTestIDs)):
     curFile = 'AlexNetFeatures2D/feats3D_conv2_'+trainTestIDs[kk]+'.npy'
     curX = np.load(curFile)
-    startInd = kk*100
-    endInd = (kk+1)*100
-    xTrainTest[startInd:endInd,:] = curX
-    yTrainTest[startInd:endInd] = trainTestLabels[kk]
+    xTrainTest[kk,:,:] = curX
+    yTrainTest[kk] = trainTestLabels[kk]
 
 print('Loading Validation Set')
 for kk in range(len(validationIDs)):
     curFile = 'AlexNetFeatures2D/feats3D_conv2_'+validationIDs[kk]+'.npy'
     curX = np.load(curFile)
-    startInd = kk*100
-    endInd = (kk+1)*100
-    Xvalid[startInd:endInd,:] = curX
+    Xvalid[kk,:,:] = curX
+
+inputI = Input(shape=(1,100,4096))
+layer1 = Convolution2D(2,1,4096)(inputI)
+layer2 = Activation('sigmoid')(layer1)
+layer3 = MaxPooling2D(pool_size=(100,1),border_mode='valid')(layer2)
+layer4 = Activation('sigmoid')(layer3)
+layer5 = Flatten()(layer4)
+layer6 = Dense(nb_classes,init='normal',activation='softmax')(layer5)
+model2 = Model(input=inputI, output=layer6)
+
 
 print('Separating Training and Test Data')
 Xtrain,Xtest,Ytrain,Ytest = train_test_split(xTrainTest,yTrainTest,test_size=0.1,random_state=42)
 
+Xtrain = Xtrain.reshape(Xtrain.shape[0], 1,100,4096)
+Xtest = Xtest.reshape(Xtest.shape[0], 1,100,4096)
+Xvalid = Xvalid.reshape(Xvalid.shape[0], 1,100,4096)
+xTrainTest = xTrainTest.reshape(xTrainTest.shape[0], 1,100,4096)
+
 Ytest2 = np_utils.to_categorical(Ytest, nb_classes)
 Ytrain2 = np_utils.to_categorical(Ytrain, nb_classes)
 
-input_img = Input(shape=(4096,))
-#layer2 = Dense(128,activation='sigmoid')(input_img)
-#logisticLayer = Dense(2,activation='sigmoid')(layer2)
-logisticLayer = Dense(2,activation='sigmoid')(input_img)
-
-logRegress = Model(input=input_img,output=logisticLayer)
-logRegress.compile(optimizer='adadelta', loss='mse')
-logRegress.fit(Xtrain, Ytrain2,
-                nb_epoch=200,
+model2.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+model2.fit(Xtrain, Ytrain2,
+                nb_epoch=50,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(Xtest, Ytest2))
 
-slicePrediction = logRegress.predict(Xvalid)
-sliceTrainTest = logRegress.predict(xTrainTest)
-
+patientPrediction = model2.predict(Xvalid)
+patientTrainTest = model2.predict(xTrainTest)
+ptPrediction = patientPrediction[:, 1]
+ptTrainTest = patientTrainTest[:,1]
+"""
 np.save('temp/slicePrediction.npy',slicePrediction)
 np.save('temp/sliceTrainTest.npy',sliceTrainTest)
-"""
 
 slicePrediction = np.load('temp/slicePrediction.npy')
 sliceTrainTest = np.load('temp/sliceTrainTest.npy')
-"""
-ptPrediction = np.zeros((numValid))
-for kk in range(numValid):
-    startInd = kk * 100
-    endInd = (kk + 1) * 100
-    sliceProbs = slicePrediction[startInd:endInd, 1]
-    ptPrediction[kk] = np.max(sliceProbs)
 
-ptTrainTest = np.zeros((numTrainTest))
-ptTarget = np.zeros((numTrainTest))
-for kk in range(numTrainTest):
-    startInd = kk * 100
-    endInd = (kk + 1) * 100
-    sliceProbs = sliceTrainTest[startInd:endInd, 1]
-    ptTrainTest[kk] = np.max(sliceProbs)
-    ptTarget[kk] = trainTestLabels[kk]
-
-
-
-mseTrainTest = ((ptTrainTest-ptTarget)**2).mean()
+mseTrainTest = ((ptTrainTest-trainTestLabels)**2).mean()
 
 print('Training,Test MSE:' + str(mseTrainTest))
+"""
+
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
@@ -156,90 +147,3 @@ with open(fileName, 'w') as csvfile:
     writer.writeheader()
     for ind in range(numValid):
         writer.writerow({'id': validationIDs[ind], 'cancer': str(ptPrediction[ind])})
-
-"""
-# this is the size of our encoded representations
-encoding_dim = 64  # 32 floats -> compression of factor 24.5, assuming the input is 784 floats
-
-# this is our input placeholder
-input_img = Input(shape=(4096,))
-# "encoded" is the encoded representation of the input
-encoded = Dense(encoding_dim, activation='relu')(input_img)
-#encoded2 = Dense(encoding_dim, activation='sigmoid')(encoded)
-# "decoded" is the lossy reconstruction of the input
-decoded = Dense(4096, activation='sigmoid')(encoded)
-
-# this model maps an input to its reconstruction
-autoencoder = Model(input=input_img, output=decoded)
-autoencoder.compile(optimizer='adadelta', loss='mse')
-
-autoencoder.fit(Xtrain, Xtrain,
-                nb_epoch=100,
-                batch_size=256,
-                shuffle=True,
-                validation_data=(Xtest, Xtest))
-
-encoder = Model(input=input_img, output=encoded)
-validationEncoded = encoder.predict(Xvalid)
-trainTestEncoded = encoder.predict(xTrainTest)
-
-sio.savemat('autoencodingPrediction.mat',
-            mdict={'validData':validationEncoded, 'trainTestData':trainTestEncoded})
-
-np.save('temp/validationAutoencoded2.npy',validationEncoded)
-np.save('temp/trainTestAutoencoded2.npy',trainTestEncoded)
-
-validationEncoded = np.load('temp/validationAutoencoded2.npy')
-trainTestEncoded = np.load('temp/trainTestAutoencoded2.npy')
-
-
-newTrainTest = np.zeros((numTrainTest,6400))
-newValidation = np.zeros((numValid,6400))
-
-print('Making New Train/Test Set')
-for kk in range(len(trainTestIDs)):
-    startInd = kk*100
-    endInd = (kk+1)*100
-    newTrainTest[kk,:] = np.reshape(trainTestEncoded[startInd:endInd,:] ,6400)
-
-print('Making New Validation Set')
-for kk in range(len(validationIDs)):
-    startInd = kk*100
-    endInd = (kk+1)*100
-    newValidation[kk,:] = np.reshape(validationEncoded[startInd:endInd,:],6400)
-
-XtrainNew,XtestNew,Ytrain2,Ytest2 = train_test_split(newTrainTest,trainTestLabels,test_size=0.1,random_state=42)
-
-Ytest2 = np_utils.to_categorical(Ytest2, nb_classes)
-Ytrain2 = np_utils.to_categorical(Ytrain2, nb_classes)
-
-
-input_img2 = Input(shape=(6400,))
-layer1 = Dense(256, init='normal', activation='sigmoid')(input_img2)
-layer2 = Dense(128, init='normal', activation='sigmoid')(layer1)
-layer3 = Dense(32, init='normal',activation='relu')(layer2)
-outputLayer = Dense(nb_classes, init='normal',activation='softmax')(layer3)
-
-post4096Model = Model(input = input_img2,output=outputLayer)
-post4096Model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-
-post4096Model.fit(XtrainNew, Ytrain2, batch_size=500, nb_epoch=50,
-                  verbose=1, validation_data=(XtestNew, Ytest2))
-
-prediction = post4096Model.predict(newValidation)
-
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-fileName = 'cnnPredictions/cnnPredictionAlexNet4096From_'+st+'.mat'
-sio.savemat(fileName,mdict={'prediction':prediction})
-
-
-
-yHatTrainP = regr.predict_proba(Xtrain)
-yHatTestP = regr.predict_proba(Xtest)
-YvalidP = regr.predict_proba(Xvalid)
-
-sio.savemat('LinRegression_results.mat',
-            mdict={'yHatTrainP':yHatTrainP,'yHatTestP':yHatTestP,
-                   'YvalidP':YvalidP,'Ytrain':Ytrain,'Ytest':Ytest})
-"""
