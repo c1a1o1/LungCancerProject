@@ -74,47 +74,89 @@ with open('stage1_sample_submission.csv') as csvfile:
 numTrainTest = len(trainTestIDs)
 numValid = len(validationIDs)
 
-Xvalid = np.zeros((numValid,100,4096))
-xTrainTest = np.zeros((numTrainTest,100,4096))
+XvalidOld = np.zeros((numValid, 100, 4096))
+xTrainTestOld = np.zeros((numTrainTest, 100, 4096))
 yTrainTest = np.zeros((numTrainTest))
+
+Xvalid2 = np.zeros((numValid*100,4096))
+xTrainTest2 = np.zeros((numTrainTest*100,4096))
 
 print('Loading Train/Test Set')
 for kk in range(len(trainTestIDs)):
     curFile = 'AlexNetFeatures2D/feats3D_conv2_'+trainTestIDs[kk]+'.npy'
     curX = np.load(curFile)
-    xTrainTest[kk,:,:] = curX
+    xTrainTestOld[kk, :, :] = curX
     yTrainTest[kk] = trainTestLabels[kk]
+    startInd = kk * 100
+    endInd = (kk + 1) * 100
+    xTrainTest2[startInd:endInd, :] = curX
 
 print('Loading Validation Set')
 for kk in range(len(validationIDs)):
     curFile = 'AlexNetFeatures2D/feats3D_conv2_'+validationIDs[kk]+'.npy'
     curX = np.load(curFile)
-    Xvalid[kk,:,:] = curX
+    XvalidOld[kk, :, :] = curX
+    startInd = kk * 100
+    endInd = (kk + 1) * 100
+    Xvalid2[startInd:endInd, :] = curX
 
-inputI = Input(shape=(1,100,4096))
-layer1 = Convolution2D(2,1,4096)(inputI)
+
+encoding_dim = 64
+input_img = Input(shape=(4096,))
+encoded = Dense(encoding_dim, activation='relu')(input_img)
+decoded = Dense(4096, activation='sigmoid')(encoded)
+autoencoder = Model(input=input_img, output=decoded)
+autoencoder.compile(optimizer='adadelta', loss='mse')
+autoencoder.fit(xTrainTest2, xTrainTest2,
+                nb_epoch=100,
+                batch_size=256,
+                shuffle=True,
+                validation_data=(Xvalid2, Xvalid2))
+encoder = Model(input=input_img, output=encoded)
+validationEncoded = encoder.predict(Xvalid2)
+trainTestEncoded = encoder.predict(xTrainTest2)
+
+XvalidNew = np.zeros((numValid,100,encoding_dim))
+xTrainTestNew = np.zeros((numTrainTest,100,encoding_dim))
+print('Loading Train/Test Set Encoded')
+for kk in range(len(trainTestIDs)):
+    startInd = kk * 100
+    endInd = (kk + 1) * 100
+    xTrainTestNew[kk,:,:] = trainTestEncoded[startInd:endInd, :]
+
+print('Loading Validation Set Encoded')
+for kk in range(len(validationIDs)):
+    startInd = kk * 100
+    endInd = (kk + 1) * 100
+    XvalidNew[kk, :, :] = validationEncoded[startInd:endInd, :]
+
+#TODO: CHANGE THIS BLOCK IF WANT TO SWITCH BACK TO 4096-DIM
+numDim=4096
+Xvalid=XvalidOld
+xTrainTest=xTrainTestOld
+
+inputI = Input(shape=(1,100,numDim))
+layer1 = Convolution2D(2,1,numDim)(inputI)
 layer2 = Activation('sigmoid')(layer1)
 layer3 = MaxPooling2D(pool_size=(100,1),border_mode='valid')(layer2)
-layer4 = Activation('sigmoid')(layer3)
-layer5 = Flatten()(layer4)
-layer6 = Dense(nb_classes,init='normal',activation='softmax')(layer5)
-model2 = Model(input=inputI, output=layer6)
+layer4 = Flatten()(layer3)
+model2 = Model(input=inputI, output=layer4)
 
 
 print('Separating Training and Test Data')
 Xtrain,Xtest,Ytrain,Ytest = train_test_split(xTrainTest,yTrainTest,test_size=0.1,random_state=42)
 
-Xtrain = Xtrain.reshape(Xtrain.shape[0], 1,100,4096)
-Xtest = Xtest.reshape(Xtest.shape[0], 1,100,4096)
-Xvalid = Xvalid.reshape(Xvalid.shape[0], 1,100,4096)
-xTrainTest = xTrainTest.reshape(xTrainTest.shape[0], 1,100,4096)
+Xtrain = Xtrain.reshape(Xtrain.shape[0], 1,100,numDim)
+Xtest = Xtest.reshape(Xtest.shape[0], 1,100,numDim)
+Xvalid = Xvalid.reshape(Xvalid.shape[0], 1,100,numDim)
+xTrainTest = xTrainTest.reshape(xTrainTest.shape[0], 1,100,numDim)
 
 Ytest2 = np_utils.to_categorical(Ytest, nb_classes)
 Ytrain2 = np_utils.to_categorical(Ytrain, nb_classes)
 
 model2.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 model2.fit(Xtrain, Ytrain2,
-                nb_epoch=50,
+                nb_epoch=20,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(Xtest, Ytest2))
