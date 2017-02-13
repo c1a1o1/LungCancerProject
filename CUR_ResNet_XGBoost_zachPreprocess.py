@@ -1,15 +1,26 @@
 import numpy as np
-import dicom
-import glob
+#import dicom
+#import glob
 from matplotlib import pyplot as plt
 import os
+import csv
 #import cv2
-import mxnet as mx
-import pandas as pd
-from sklearn import cross_validation
-import xgboost as xgb
-import scipy.io as sio
+# import mxnet as mx
+# import pandas as pd
+# from sklearn import cross_validation
+# import xgboost as xgb
+from keras.datasets import mnist
+from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Convolution3D, MaxPooling3D
+from keras.utils import np_utils
+from keras import backend as K
 
+from keras.applications.resnet50 import ResNet50
+import scipy.io as sio
+from scipy.misc import imresize
+"""
 def get_extractor():
     model = mx.model.FeedForward.load('model/resnet-50', 0, ctx=mx.cpu(), numpy_batch_size=1)
     fea_symbol = model.symbol.get_internals()["flatten0_output"]
@@ -19,7 +30,7 @@ def get_extractor():
 
     return feature_extractor
 
-"""
+
 def get_3d_data(path):
     slices = [dicom.read_file(path + '/' + s) for s in os.listdir(path)]
     slices.sort(key=lambda x: int(x.InstanceNumber))
@@ -66,54 +77,111 @@ def calc_features():
         print(feats.shape)
         np.save(folder, feats)
 """
+
+# if K.image_dim_ordering() == 'th':
+#     input_shape = (1, img_rows, img_cols,img_sli)
+# else:
+#     input_shape = (img_rows, img_cols,img_sli, 1)
+
+trainTestIDs = []
+trainTestLabels = []
+validationIDs = []
+with open('stage1_labels.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        trainTestIDs.append(row['id'])
+        trainTestLabels.append(row['cancer'])
+
+with open('stage1_sample_submission.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        validationIDs.append(row['id'])
+
 def getVolData(patID):
     patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_" + patID + ".mat"
     curMATcontent = sio.loadmat(patFile)
     volData = curMATcontent["resizedDCM"]
     return volData.astype('float32')
 
+net = ResNet50(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
+#   TODO: MODIFY THIS SO OUTPUT LAYER IS SECOND TO LAST LAYER OF 2048 NODES
+# net = Sequential()
+# for lInd in range(176):
+#     curLayer = origNet.get_layer(index=lInd)
+#     net.add(curLayer)
+
+def genResNetFeatFile(id):
+    fileName = 'data/segFilesResizedResNet/resnetFeats_' + id + '.npy'
+    curData = getVolData(id)
+    curDataReshape = np.reshape(curData,(1,256,256,100))
+    batch = []
+    cnt = 0
+    dx = 40
+    ds = 512
+    for i in range(0, curData.shape[2] - 3, 3):
+        tmp = []
+        for j in range(3):
+            img2 = curData[i + j]
+            img = imresize(img2,(224,224))
+            tmp.append(img)
+        tmp = np.array(tmp)
+        batch.append(np.array(tmp))
+    batch = np.array(batch)
+    feats = net.predict(batch)
+    np.save(fileName, feats)
+
+def calc_featuresA():
+    for id in trainTestIDs:
+        genResNetFeatFile(id)
+    for id in validationIDs:
+        genResNetFeatFile(id)
+
+
+
 def train_xgboost():
-    df = pd.read_csv('data/stage1_labels.csv')
-    print(df.head())
+    #df = pd.read_csv('data/stage1_labels.csv')
+    #print(df.head())
 
     #x = np.array([np.mean(np.load('stage1/%s.npy' % str(id)), axis=0) for id in df['id'].tolist()])
 
     print('Train/Validation Data Shape:')
-    x = np.array([np.mean(getVolData(id), axis=0) for id in df['id'].tolist()])
+    #x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs.tolist()])
+    x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs])
     print(x.shape)
-    y = df['cancer'].as_matrix()
+    y = trainTestLabels.as_matrix()
 
-    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-                                                                   test_size=0.20)
-
-    clf = xgb.XGBRegressor(max_depth=10,
-                           n_estimators=1500,
-                           min_child_weight=9,
-                           learning_rate=0.05,
-                           nthread=8,
-                           subsample=0.80,
-                           colsample_bytree=0.80,
-                           seed=4242)
-
-    clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=50)
-    return clf
+    # trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
+    #                                                                test_size=0.20)
+    #
+    # clf = xgb.XGBRegressor(max_depth=10,
+    #                        n_estimators=1500,
+    #                        min_child_weight=9,
+    #                        learning_rate=0.05,
+    #                        nthread=8,
+    #                        subsample=0.80,
+    #                        colsample_bytree=0.80,
+    #                        seed=4242)
+    #
+    # clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=50)
+    # return clf
 
 
 def make_submit():
-    clf = train_xgboost()
+    #clf = train_xgboost()
+    train_xgboost()
+    #df = pd.read_csv('data/stage1_sample_submission.csv')
 
-    df = pd.read_csv('data/stage1_sample_submission.csv')
-
-    x = np.array([np.mean(getVolData(id), axis=0) for id in df['id'].tolist()])
+    #x = np.array([np.mean(getVolData(id), axis=0) for id in validationIDs.tolist()])
+    x = np.array([np.mean(getVolData(id), axis=0) for id in validationIDs])
     print('Test Data Shape:')
     print(x.shape)
-    pred = clf.predict(x)
+    #pred = clf.predict(x)
 
-    df['cancer'] = pred
-    df.to_csv('subm1.csv', index=False)
-    print(df.head())
+    # df['cancer'] = pred
+    # df.to_csv('subm1.csv', index=False)
+    # print(df.head())
 
 
 if __name__ == '__main__':
-    #calc_features()
-    make_submit()
+    calc_featuresA()
+    #make_submit()
