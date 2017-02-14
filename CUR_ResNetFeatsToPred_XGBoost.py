@@ -5,6 +5,8 @@ from matplotlib import pyplot as plt
 import os
 import csv
 #import cv2
+import time
+import datetime
 # import mxnet as mx
 # import pandas as pd
 # from sklearn import cross_validation
@@ -177,20 +179,35 @@ def train_xgboost():
                            colsample_bytree=0.80,
                            seed=4242)
 
-    clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=50)
+    clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=100)
     return clf
 
 
 def make_submit():
-    #clf = train_xgboost()
-    train_xgboost()
-    #df = pd.read_csv('data/stage1_sample_submission.csv')
+    clf = train_xgboost()
 
-    #x = np.array([np.mean(getVolData(id), axis=0) for id in validationIDs.tolist()])
-    x = np.array([np.mean(getFeatureData(id), axis=0) for id in validationIDs])
-    print('Test Data Shape:')
-    print(x.shape)
-    #pred = clf.predict(x)
+    print('Kaggle Test Data being obtained')
+    x2 = np.zeros((len(validationIDs), 2048))
+    ind = 0
+    for id in validationIDs:
+        featData = getFeatureData(id)
+        x2[ind, :] = np.mean(featData, axis=0)
+        ind = ind + 1
+    print('Finished getting kaggle test data')
+
+    pred = clf.predict(x2)
+
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
+    fileName = 'submissions/resNetPlusXGBoost_' + st + '.csv'
+
+    with open(fileName, 'w') as csvfile:
+        fieldnames = ['id', 'cancer']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for ind in range(len(validationIDs)):
+            writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
 
     # df['cancer'] = pred
     # df.to_csv('subm1.csv', index=False)
