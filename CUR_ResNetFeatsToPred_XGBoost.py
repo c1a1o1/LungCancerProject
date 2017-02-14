@@ -20,6 +20,10 @@ from keras import backend as K
 from keras.applications.resnet50 import ResNet50
 import scipy.io as sio
 from scipy.misc import imresize
+from sklearn import cross_validation
+import xgboost as xgb
+from keras.utils import np_utils
+import glob
 """
 def get_extractor():
     model = mx.model.FeedForward.load('model/resnet-50', 0, ctx=mx.cpu(), numpy_batch_size=1)
@@ -136,7 +140,12 @@ def calc_featuresA():
 """
 def getFeatureData(id):
     fileName = '/home/zdestefa/data/segFilesResizedResNet/resnetFeats_' + id + '.npy'
-    np.load(fileName)
+    return np.load(fileName)
+
+# for fileNm in glob.glob('/home/zdestefa/data/segFilesResizedResNet/*.npy'):
+#     curData = np.load(fileNm)
+#     print('Name: ' + fileNm)
+#     print('Shape:' + str(curData.shape))
 
 def train_xgboost():
     #df = pd.read_csv('data/stage1_labels.csv')
@@ -144,27 +153,32 @@ def train_xgboost():
 
     #x = np.array([np.mean(np.load('stage1/%s.npy' % str(id)), axis=0) for id in df['id'].tolist()])
 
-    print('Train/Validation Data Shape:')
+    print('Train/Validation Data being obtained')
     #x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs.tolist()])
+    x = np.zeros((len(trainTestIDs),2048))
+    ind = 0
+    for id in trainTestIDs:
+        featData = getFeatureData(id)
+        x[ind,:] =np.mean(featData,axis=0)
+        ind = ind+1
+        #x.append(np.array([np.mean(featData,axis=0)]))
+    print('Finished getting train/test data')
+    #y = np_utils.to_categorical(trainTestLabels, 2)
+    y = [float(lab) for lab in trainTestLabels]
+    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
+                                                                   test_size=0.20)
 
-    x = np.array([np.mean(getFeatureData(id), axis=0) for id in trainTestIDs])
-    print(x.shape)
-    y = trainTestLabels.as_matrix()
+    clf = xgb.XGBRegressor(max_depth=10,
+                           n_estimators=1500,
+                           min_child_weight=9,
+                           learning_rate=0.05,
+                           nthread=8,
+                           subsample=0.80,
+                           colsample_bytree=0.80,
+                           seed=4242)
 
-    # trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-    #                                                                test_size=0.20)
-    #
-    # clf = xgb.XGBRegressor(max_depth=10,
-    #                        n_estimators=1500,
-    #                        min_child_weight=9,
-    #                        learning_rate=0.05,
-    #                        nthread=8,
-    #                        subsample=0.80,
-    #                        colsample_bytree=0.80,
-    #                        seed=4242)
-    #
-    # clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=50)
-    # return clf
+    clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=50)
+    return clf
 
 
 def make_submit():
