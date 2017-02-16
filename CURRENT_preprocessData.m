@@ -23,11 +23,12 @@ for i = 1:numFolders
 
     foldName = curSampleFolder(end-31:end);
     
-    resizedDCM = imresize3d(outputDCM,[],[256 256 100],'nearest','fill');
+    %resizedDCM = imresize3d(outputDCM,[],[256 256 100],'nearest','fill');
+    %newFileName = strcat('segFilesResizedAll/resizedSegDCM_',foldName);
+    %save(newFileName,'resizedDCM');
     
-    newFileName = strcat('segFilesResizedAll/resizedSegDCM_',foldName);
-    save(newFileName,'resizedDCM');
-    
+    newFileName = strcat('segFiles/segDCM_',foldName);
+    save(newFileName,'outputDCM');
 
 end
 

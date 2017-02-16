@@ -157,11 +157,12 @@ def train_xgboost():
 
     print('Train/Validation Data being obtained')
     #x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs.tolist()])
-    x = np.zeros((len(trainTestIDs),2048))
+    x = np.zeros((len(trainTestIDs),4096))
     ind = 0
     for id in trainTestIDs:
         featData = getFeatureData(id)
-        x[ind,:] =np.mean(featData,axis=0)
+        x[ind,0:2048] =np.mean(featData,axis=0)
+        x[ind, 2048:4096] = np.max(featData, axis=0) #this causes potential overfit. should remove
         ind = ind+1
         #x.append(np.array([np.mean(featData,axis=0)]))
     print('Finished getting train/test data')
@@ -187,11 +188,12 @@ def make_submit():
     clf = train_xgboost()
 
     print('Kaggle Test Data being obtained')
-    x2 = np.zeros((len(validationIDs), 2048))
+    x2 = np.zeros((len(validationIDs), 4096))
     ind = 0
     for id in validationIDs:
         featData = getFeatureData(id)
-        x2[ind, :] = np.mean(featData, axis=0)
+        x2[ind, 0:2048] = np.mean(featData, axis=0)
+        x2[ind, 2048:4096] = np.max(featData, axis=0) #this causes overfitting. to remove.
         ind = ind + 1
     print('Finished getting kaggle test data')
 
