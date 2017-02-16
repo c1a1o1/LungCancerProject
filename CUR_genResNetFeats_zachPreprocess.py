@@ -106,6 +106,14 @@ def getVolData(patID):
 origNet = ResNet50(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 net = Model(input=origNet.input,output=origNet.get_layer('flatten_1').output)
 
+#Here is output showing that the Activation_49 layer has 2048x7x7 nodes and the 2D one
+#   We will want to use
+
+#>>> myLayer = origNet.get_layer('activation_49')
+#>>> myLayer.output_shape
+#(None, 2048, 7, 7)
+
+
 def genResNetFeatFile(id):
     fileName = 'data/segFilesResizedResNet/resnetFeats_' + id + '.npy'
     curData = getVolData(id)
