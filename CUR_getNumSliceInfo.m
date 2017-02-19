@@ -17,3 +17,21 @@ for ii = 1:length(segs)
 end
 
 save('segFilesSlicInfo.mat','numR','numC','numSlic');
+
+%%
+
+load('segFilesSlicInfo.mat')
+
+%%
+
+figure
+hist(numSlic,100);
+title('Number of Slices Histogram');
+
+figure
+hist(numR,100);
+title('Number of Rows Hist');
+
+figure
+hist(numC,100);
+title('Number of Cols Hist');

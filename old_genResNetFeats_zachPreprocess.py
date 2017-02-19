@@ -104,9 +104,7 @@ def getVolData(patID):
     return volData.astype('float32')
 
 origNet = ResNet50(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
-#net = Model(input=origNet.input,output=origNet.get_layer('flatten_1').output)
-net2 = Model(input=origNet.input,output=origNet.get_layer('activation_48').output)
-net3 = Model(input=origNet.input,output=origNet.get_layer('activation_49').output)
+net = Model(input=origNet.input,output=origNet.get_layer('flatten_1').output)
 
 #Here is output showing that the Activation_49 layer has 2048x7x7 nodes and the 2D one
 #   We will want to use
@@ -117,8 +115,7 @@ net3 = Model(input=origNet.input,output=origNet.get_layer('activation_49').outpu
 
 
 def genResNetFeatFile(id):
-    fileName2 = 'data/segFilesResizedResNetAct48/resnetFeats_' + id + '.npy'
-    fileName3 = 'data/segFilesResizedResNetAct49/resnetFeats_' + id + '.npy'
+    fileName = 'data/segFilesResizedResNet/resnetFeats_' + id + '.npy'
     curData = getVolData(id)
     curDataReshape = np.reshape(curData,(1,256,256,100))
     batch = []
@@ -134,22 +131,15 @@ def genResNetFeatFile(id):
         tmp = np.array(tmp)
         batch.append(np.array(tmp))
     batch = np.array(batch)
-    feats2 = net2.predict(batch)
-    feats3 = net3.predict(batch)
-
-    np.save(fileName2, feats2)
-    np.save(fileName3, feats3)
+    feats = net.predict(batch)
+    print('current resnet output shape:')
+    print(feats.shape)
+    np.save(fileName, feats)
 
 def calc_featuresA():
-    total = len(trainTestIDs)+len(validationIDs)
-    curInd = 0
     for id in trainTestIDs:
-        curInd = curInd + 1
-        print('Obtaining features for file_' + str(curInd) + '_of_' + str(total))
         genResNetFeatFile(id)
     for id in validationIDs:
-        print('Obtaining features for file_' + str(curInd) + '_of_' + str(total))
-        curInd = curInd + 1
         genResNetFeatFile(id)
 
 
