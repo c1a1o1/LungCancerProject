@@ -146,8 +146,8 @@ def calc_featuresA():
     for id in validationIDs:
         genResNetFeatFile(id)
 """
-def getFeatureData(id):
-    fileName = '/home/zdestefa/data/segFilesResizedResNetAct49/resnetFeats_' + id + '.npy'
+def getFeatureData(ids):
+    fileName = '/home/zdestefa/data/segFilesResizedResNetAct49/resnetFeats_' + ids + '.npy'
     dataFromFile = np.load(fileName)
     returnData = np.reshape(dataFromFile,(dataFromFile.shape[0],
                                           dataFromFile.shape[1],
@@ -162,7 +162,7 @@ def dataGenerator(patIDnumbers, patLabels, indsUse):
     while 1:
         for ind in range(len(indsUse)):
             patID = patIDnumbers[indsUse[ind]]
-            XCur = getFeatureData(id)
+            XCur = getFeatureData(patID)
             if K.image_dim_ordering() == 'th':
                 XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
             else:
@@ -176,7 +176,7 @@ def validDataGenerator():
     while 1:
         for ind in range(len(validationIDs)):
             patID = validationIDs[ind]
-            XCur = getFeatureData(id)
+            XCur = getFeatureData(patID)
             if K.image_dim_ordering() == 'th':
                 XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
             else:
@@ -200,7 +200,6 @@ def train_CNN():
     pool_size=(7,7,7)
     model = Sequential()
     model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1], kernel_size[2],border_mode='valid',input_shape=input_shape))
-    model.add(Activation('relu'))
     model.add(MaxPooling3D(pool_size=pool_size)) #shape: (None, 10, 3, 291,6)
     model.add(Activation('relu'))
     model.add(MaxPooling3D(pool_size=(1, 1, 6))) #shape: (None, 10, 3, 291, 1)
@@ -208,7 +207,7 @@ def train_CNN():
     model.add(Activation('relu'))
     model.add(MaxPooling3D(pool_size=(1, 97, 1)))
     model.add(Flatten())
-    model.add(Dense(32,activation='sigmoid'))
+    model.add(Dense(32,activation='relu'))
     model.add(Dense(16,activation='sigmoid'))
     model.add(Dense(2,activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
