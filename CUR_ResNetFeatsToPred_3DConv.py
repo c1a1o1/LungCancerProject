@@ -102,6 +102,12 @@ with open('stage1_sample_submission.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         validationIDs.append(row['id'])
+
+trainingRatio = 0.90
+numTrainTestAll = len(trainTestIDs)
+numTrain = int(np.floor(trainingRatio*numTrainTestAll))
+numTest = numTrainTestAll-numTrain
+numValid = len(validationIDs)
 """
 origNet = ResNet50(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 net = Model(input=origNet.input,output=origNet.get_layer('flatten_1').output)
@@ -141,63 +147,83 @@ def calc_featuresA():
         genResNetFeatFile(id)
 """
 def getFeatureData(id):
-    fileName = '/home/zdestefa/data/segFilesResizedResNet/resnetFeats_' + id + '.npy'
-    return np.load(fileName)
+    fileName = '/home/zdestefa/data/segFilesResizedResNetAct49/resnetFeats_' + id + '.npy'
+    dataFromFile = np.load(fileName)
+    returnData = np.reshape(dataFromFile,(dataFromFile.shape[0],
+                                          dataFromFile.shape[1],
+                                          dataFromFile.shape[2]*dataFromFile.shape[3]))
+    return returnData
 
+img_rows=33
+img_cols=2048
+img_sli=49
+nb_classes=2
+def dataGenerator(patIDnumbers, patLabels, indsUse):
+    while 1:
+        for ind in range(len(indsUse)):
+            patID = patIDnumbers[indsUse[ind]]
+            XCur = getFeatureData(id)
+            if K.image_dim_ordering() == 'th':
+                XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
+            else:
+                XCur = XCur.reshape(1, img_rows, img_cols, img_sli, 1)
+            YCur = int(patLabels[indsUse[ind]])
+            YUse = np_utils.to_categorical(YCur, nb_classes)
+            #print("Ind:" + str(ind))
+            yield (XCur.astype('float32'),YUse)
+
+def validDataGenerator():
+    while 1:
+        for ind in range(len(validationIDs)):
+            patID = validationIDs[ind]
+            XCur = getFeatureData(id)
+            if K.image_dim_ordering() == 'th':
+                XCur = XCur.reshape(1, 1, img_rows, img_cols, img_sli)
+            else:
+                XCur = XCur.reshape(1, img_rows, img_cols, img_sli, 1)
+            #print("ValidInd:" + str(ind))
+            yield (XCur.astype('float32'))
 # for fileNm in glob.glob('/home/zdestefa/data/segFilesResizedResNet/*.npy'):
 #     curData = np.load(fileNm)
 #     print('Name: ' + fileNm)
 #     print('Shape:' + str(curData.shape))
 
-def train_xgboost():
-    #df = pd.read_csv('data/stage1_labels.csv')
-    #print(df.head())
+def train_CNN():
 
-    #x = np.array([np.mean(np.load('stage1/%s.npy' % str(id)), axis=0) for id in df['id'].tolist()])
+    randInds = np.random.permutation(numTrainTestAll)
+    indsTrain = randInds[0:numTrain]
+    indsTest = randInds[numTrain:numTrainTestAll]
 
-    print('Train/Validation Data being obtained')
-    #x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs.tolist()])
-    x = np.zeros((len(trainTestIDs),4096))
-    ind = 0
-    for id in trainTestIDs:
-        featData = getFeatureData(id)
-        x[ind,0:2048] =np.mean(featData,axis=0)
-        x[ind, 2048:4096] = np.max(featData, axis=0) #this causes potential overfit. should remove
-        ind = ind+1
-        #x.append(np.array([np.mean(featData,axis=0)]))
-    print('Finished getting train/test data')
-    #y = np_utils.to_categorical(trainTestLabels, 2)
-    y = [float(lab) for lab in trainTestLabels]
-    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-                                                                   test_size=0.20)
+    nb_filters=10
+    kernel_size = (7,7,7)
+    input_shape = (1, 33, 2048,49)
+    pool_size=(7,7,7)
+    model = Sequential()
+    model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1], kernel_size[2],border_mode='valid',input_shape=input_shape))
+    model.add(Activation('relu'))
+    model.add(MaxPooling3D(pool_size=pool_size)) #shape: (None, 10, 3, 291,6)
+    model.add(Activation('relu'))
+    model.add(MaxPooling3D(pool_size=(1, 1, 6))) #shape: (None, 10, 3, 291, 1)
+    model.add(Dropout(0.2))
+    model.add(Activation('relu'))
+    model.add(MaxPooling3D(pool_size=(1, 97, 1)))
+    model.add(Flatten())
+    model.add(Dense(32,activation='sigmoid'))
+    model.add(Dense(16,activation='sigmoid'))
+    model.add(Dense(2,activation='softmax'))
+    model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+    nb_epoch=10
+    model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain),
+                        samples_per_epoch=1000, nb_epoch=nb_epoch, nb_val_samples=50,
+                        verbose=1, validation_data=dataGenerator(trainTestIDs, trainTestLabels, indsTest))
 
-    clf = xgb.XGBRegressor(max_depth=10,
-                           n_estimators=1500,
-                           min_child_weight=9,
-                           learning_rate=0.05,
-                           nthread=8,
-                           subsample=0.80,
-                           colsample_bytree=0.80,
-                           seed=4242)
+    yValidPred = model.predict_generator(validDataGenerator(), val_samples=len(validationIDs))
 
-    clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=100)
-    return clf
+    return yValidPred
 
 
 def make_submit():
-    clf = train_xgboost()
-
-    print('Kaggle Test Data being obtained')
-    x2 = np.zeros((len(validationIDs), 4096))
-    ind = 0
-    for id in validationIDs:
-        featData = getFeatureData(id)
-        x2[ind, 0:2048] = np.mean(featData, axis=0)
-        x2[ind, 2048:4096] = np.max(featData, axis=0) #this causes overfitting. to remove.
-        ind = ind + 1
-    print('Finished getting kaggle test data')
-
-    pred = clf.predict(x2)
+    pred = train_CNN()
 
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
