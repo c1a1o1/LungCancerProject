@@ -37,7 +37,7 @@ indsTest = randInds[numTrain:numTrainTestAll]
 img_rows=33
 img_sli=49
 nb_classes=2
-nb_epoch=15
+nb_epoch=10
 
 fileNmPrefix1 = '/home/zdestefa/data/segFilesResizedResNetAct48/resnetFeats_'
 fileNmPrefix2 = '/home/zdestefa/data/segFilesResizedResNetAct49/resnetFeats_'
@@ -104,6 +104,7 @@ def trainAndValidateNN(img_cols,fileNmPefix):
 
     yValidPred = model.predict_generator(validDataGenerator(img_cols,fileNmPefix),
                                          val_samples=len(validationIDs))
+    pred = yValidPred[:,1]
 
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
@@ -115,8 +116,8 @@ def trainAndValidateNN(img_cols,fileNmPefix):
 
         writer.writeheader()
         for ind in range(len(validationIDs)):
-            writer.writerow({'id': validationIDs[ind], 'cancer': str(yValidPred[ind])})
+            writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
 
-
-trainAndValidateNN(img_cols1,fileNmPrefix1)
 trainAndValidateNN(img_cols2,fileNmPrefix2)
+trainAndValidateNN(img_cols1,fileNmPrefix1)
+
