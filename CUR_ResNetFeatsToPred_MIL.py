@@ -37,14 +37,12 @@ indsTest = randInds[numTrain:numTrainTestAll]
 img_rows=33
 img_sli=49
 nb_classes=2
-nb_epoch=6
+nb_epoch=30
 
 fileNmPrefix1 = '/home/zdestefa/data/segFilesResizedResNetAct48/resnetFeats_'
 fileNmPrefix2 = '/home/zdestefa/data/segFilesResizedResNetAct49/resnetFeats_'
 img_cols1=512
 img_cols2=2048
-nb_filters=16
-kernel_size=(11,64,7)
 
 def getFeatureData(ids,fileNmPrefix):
     fileName = fileNmPrefix + ids + '.npy'
@@ -87,15 +85,13 @@ def trainAndValidateNN(img_cols,fileNmPefix):
     model = Sequential()
 
     #filter blocks to compres the info
-    model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1], kernel_size[2],
+    initKernel=(1,img_cols,1)
+    model.add(Convolution3D(2, initKernel[0], initKernel[1], initKernel[2],
                             border_mode='valid',input_shape=getInputShape(img_cols)))
-    model.add(MaxPooling3D(pool_size=kernel_size))
-
-    model.add(Dropout(0.2))
+    model.add(Activation('sigmoid'))
+    model.add(MaxPooling3D(pool_size=(img_rows, 1, img_sli)))
     model.add(Flatten())
-    model.add(Dense(128,activation='relu'))
-    model.add(Dense(16,activation='sigmoid'))
-    model.add(Dense(2,activation='softmax'))
+
     model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
     model.fit_generator(dataGenerator(trainTestIDs, trainTestLabels, indsTrain,img_cols,fileNmPefix),
                         samples_per_epoch=1000,nb_epoch=nb_epoch, nb_val_samples=50,verbose=1,
@@ -108,7 +104,7 @@ def trainAndValidateNN(img_cols,fileNmPefix):
 
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-    fileName = 'submissions/resNetPlusXGBoost_' + st + '.csv'
+    fileName = 'submissions/resNetPlusMIL_' + st + '.csv'
 
     with open(fileName, 'w') as csvfile:
         fieldnames = ['id', 'cancer']
@@ -118,6 +114,7 @@ def trainAndValidateNN(img_cols,fileNmPefix):
         for ind in range(len(validationIDs)):
             writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
 
-#trainAndValidateNN(img_cols2,fileNmPrefix2)
 trainAndValidateNN(img_cols1,fileNmPrefix1)
+trainAndValidateNN(img_cols2,fileNmPrefix2)
+
 
