@@ -1,4 +1,6 @@
-lines = importdata('resNetTo3DConvOutput1.txt','\n');
+%lines = importdata('resNetTo3DConvOutput1.txt','\n');
+lines = importdata('resNetFeatsToPredMILresults.txt','\n');
+
 trainingLoss = [];
 validationLoss = [];
 trainingAccu = [];
@@ -31,7 +33,7 @@ for linNum = 1:length(lines)
        end
    end
 end
-%%
+
 trainLoss512 = trainingLoss(1:15);
 validLoss512 = validationLoss(1:15);
 
@@ -43,7 +45,7 @@ validAccu512 = validationAccu(1:15);
 
 trainAccu2048 = trainingAccu(16:30);
 validAccu2048 = validationAccu(16:30);
-
+%%
 figure
 hold on
 plot(trainLoss512,'r--')
