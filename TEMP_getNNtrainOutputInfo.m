@@ -45,6 +45,20 @@ validAccu512 = validationAccu(1:15);
 
 trainAccu2048 = trainingAccu(16:30);
 validAccu2048 = validationAccu(16:30);
+
+figure
+hold on
+plot(trainLoss512,'r--')
+plot(validLoss512,'r-','LineWidth',2)
+plot(trainLoss2048,'k--')
+plot(validLoss2048,'k-','LineWidth',2)
+xlabel('# Epoch');
+ylabel('Log Loss');
+legend('Training Loss for 512x7x7','Validation Loss for 512x7x7',...
+    'Training Loss for 2048x7x7','Validation Loss for 2048x7x7');
+hold off
+
+
 %%
 figure
 hold on
