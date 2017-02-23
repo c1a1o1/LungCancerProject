@@ -42,27 +42,19 @@ with open('stage1_sample_submission.csv') as csvfile:
         validationIDs.append(row['id'])
 
 numGivenFeat=4096
-numConcatFeats = numGivenFeat*1
+numConcatFeats = numGivenFeat*3
 
 def getFeatureData(id):
     fileName = '/home/zdestefa/data/segFilesResizedVGG19to4096/resnetFeats_' + id + '.npy'
     featData = np.load(fileName)
     outVec = np.zeros((1,numConcatFeats))
     outVec[0, 0:numGivenFeat] = np.mean(featData, axis=0)
-    #outVec[0, numGivenFeat:numGivenFeat * 2] = np.max(featData, axis=0)  # this causes potential overfit. should remove
-    #outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData, axis=0)  # this causes potential overfit. should remove
+    outVec[0, numGivenFeat:numGivenFeat * 2] = np.max(featData, axis=0)  # this causes potential overfit. should remove
+    outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData, axis=0)  # this causes potential overfit. should remove
     return outVec
 
-# for fileNm in glob.glob('/home/zdestefa/data/segFilesResizedResNet/*.npy'):
-#     curData = np.load(fileNm)
-#     print('Name: ' + fileNm)
-#     print('Shape:' + str(curData.shape))
 
 def train_xgboost():
-    #df = pd.read_csv('data/stage1_labels.csv')
-    #print(df.head())
-
-    #x = np.array([np.mean(np.load('stage1/%s.npy' % str(id)), axis=0) for id in df['id'].tolist()])
 
     print('Train/Validation Data being obtained')
     #x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs.tolist()])
@@ -117,10 +109,6 @@ def make_submit():
         writer.writeheader()
         for ind in range(len(validationIDs)):
             writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
-
-    # df['cancer'] = pred
-    # df.to_csv('subm1.csv', index=False)
-    # print(df.head())
 
 
 if __name__ == '__main__':
