@@ -1,0 +1,10 @@
+Train/Validation Data being obtained
+Finished getting train/test data
+Traceback (most recent call last):
+  File "CUR_VGG19FeatsToPred_XGBoost.py", line 106, in <module>
+    make_submit()
+  File "CUR_VGG19FeatsToPred_XGBoost.py", line 79, in make_submit
+    clf = train_xgboost()
+  File "CUR_VGG19FeatsToPred_XGBoost.py", line 71, in train_xgboost
+    seed=4242)
+TypeError: __init__() got an unexpected keyword argument 'min_split_loss'

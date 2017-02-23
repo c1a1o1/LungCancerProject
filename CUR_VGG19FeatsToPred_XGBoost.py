@@ -1,31 +1,10 @@
 import numpy as np
-#import dicom
-#import glob
-from matplotlib import pyplot as plt
-import os
 import csv
-#import cv2
 import time
 import datetime
-# import mxnet as mx
-# import pandas as pd
-# from sklearn import cross_validation
-# import xgboost as xgb
-from keras.datasets import mnist
-from keras.models import Sequential, Model
-from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
-from keras.layers import Convolution3D, MaxPooling3D
-from keras.utils import np_utils
-from keras import backend as K
 
-from keras.applications.resnet50 import ResNet50
-import scipy.io as sio
-from scipy.misc import imresize
 from sklearn import cross_validation
 import xgboost as xgb
-from keras.utils import np_utils
-import glob
 
 trainTestIDs = []
 trainTestLabels = []
@@ -71,7 +50,17 @@ def train_xgboost():
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
                                                                    test_size=0.20)
 
-    clf = xgb.XGBRegressor(max_depth=30,
+    # clf = xgb.XGBRegressor(max_depth=30,
+    #                        n_estimators=1500,
+    #                        min_child_weight=9,
+    #                        learning_rate=0.05,
+    #                        nthread=8,
+    #                        subsample=0.80,
+    #                        colsample_bytree=0.80,
+    #                        seed=4242)
+
+    #change the max depth
+    clf = xgb.XGBRegressor(max_depth=10,
                            n_estimators=1500,
                            min_child_weight=9,
                            learning_rate=0.05,
