@@ -44,7 +44,8 @@ fileNmPrefix2 = '/home/zdestefa/data/segFilesResizedResNetAct49/resnetFeats_'
 img_cols1=512
 img_cols2=2048
 nb_filters=16
-kernel_size=(11,64,7)
+kernel_size1=(11,img_cols1,7)
+kernel_size2=(11,img_cols2,7)
 
 def getFeatureData(ids,fileNmPrefix):
     fileName = fileNmPrefix + ids + '.npy'
@@ -83,13 +84,13 @@ def getInputShape(img_cols):
     return (1, img_rows, img_cols, img_sli)
 
 
-def trainAndValidateNN(img_cols,fileNmPefix):
+def trainAndValidateNN(img_cols,fileNmPefix,kernel_size):
     model = Sequential()
 
     #filter blocks to compres the info
     model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1], kernel_size[2],
                             border_mode='valid',input_shape=getInputShape(img_cols)))
-    model.add(MaxPooling3D(pool_size=kernel_size))
+    model.add(AveragePooling3D(pool_size=(11,1,7)))
 
     model.add(Dropout(0.2))
     model.add(Flatten())
@@ -118,6 +119,6 @@ def trainAndValidateNN(img_cols,fileNmPefix):
         for ind in range(len(validationIDs)):
             writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
 
-#trainAndValidateNN(img_cols2,fileNmPrefix2)
-trainAndValidateNN(img_cols1,fileNmPrefix1)
+trainAndValidateNN(img_cols2,fileNmPrefix2,kernel_size2)
+trainAndValidateNN(img_cols1,fileNmPrefix1,kernel_size1)
 
