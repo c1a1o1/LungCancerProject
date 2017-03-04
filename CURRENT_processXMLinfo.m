@@ -1,5 +1,44 @@
-file1 = dir('randFiles/*.xml');
-file2 = dir('randFiles/*.mat');
+%file1 = dir('randFiles/*.xml');
+%file2 = dir('randFiles/*.mat');
+
+dcmInfoFiles = dir('DOI_dcmInfo/*.mat');
+xmlFiles = dir('DOI_modXML/*.xml');
+%%
+
+filex = dcmInfoFiles(1).name;
+filex(14:end-4); %gets the patient ID 
+
+filey = xmlFiles(1).name;
+filey(9:end-4); %gets the patient ID
+
+dcmFileNames = cell(1,length(dcmInfoFiles));
+dcmFilePatIDs = cell(1,length(dcmInfoFiles));
+for ii = 1:length(dcmInfoFiles)
+    currentFileName = dcmInfoFiles(ii).name;
+    currentPatId = currentFileName(14:end-4);
+    dcmFileNames{ii} = currentFileName;
+    dcmFilePatIDs{ii} = currentPatId;
+end
+dcmFileInfoMap = containers.Map(dcmFilePatIDs,dcmFileNames);
+
+xmlFileNames = cell(1,length(xmlFiles));
+xmlFilePatIDs = cell(1,length(xmlFiles));
+for ii = 1:length(xmlFiles)
+    currentFileName = xmlFiles(ii).name;
+    currentPatId = currentFileName(9:end-4);
+    xmlFileNames{ii} = currentFileName;
+    xmlFilePatIDs{ii} = currentPatId;
+end
+xmlFileInfoMap = containers.Map(xmlFilePatIDs,xmlFileNames);
+%%
+
+allDCMkeys = keys(dcmFileInfoMap);
+xmlFilesForDCM = values(xmlFileInfoMap,allDCMkeys);
+allXMLkeys = keys(xmlFileInfoMap);
+dcmFilesForXML = values(dcmFileInfoMap,allXMLkeys);
+
+
+%%
 sliceLoc = load(strcat('randFiles/',file2.name));
 info = xml2struct(strcat('randFiles/',file1.name));
 
