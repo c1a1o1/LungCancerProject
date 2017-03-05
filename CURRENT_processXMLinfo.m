@@ -1,78 +1,64 @@
 %file1 = dir('randFiles/*.xml');
 %file2 = dir('randFiles/*.mat');
 
-dcmInfoFiles = dir('DOI_dcmInfo/*.mat');
+%dcmInfoFiles = dir('DOI_dcmInfo/*.mat');
+sliceInfoFiles = dir('DOI_modSliceLoc/*.mat');
 xmlFiles = dir('DOI_modXML/*.xml');
-%%
 
+%{
 filex = dcmInfoFiles(1).name;
-filex(14:end-4); %gets the patient ID 
+filex(13:end-4); %gets the patient ID 
 
 filey = xmlFiles(1).name;
 filey(9:end-4); %gets the patient ID
+%}
 
-dcmFileNames = cell(1,length(dcmInfoFiles));
-dcmFilePatIDs = cell(1,length(dcmInfoFiles));
-for ii = 1:length(dcmInfoFiles)
-    currentFileName = dcmInfoFiles(ii).name;
-    currentPatId = currentFileName(14:end-4);
-    dcmFileNames{ii} = currentFileName;
-    dcmFilePatIDs{ii} = currentPatId;
-end
-dcmFileInfoMap = containers.Map(dcmFilePatIDs,dcmFileNames);
+xmlFileInfoMap = getFileNameDict(xmlFiles,9,4);
+sliceInfoFileMap = getFileNameDict(sliceInfoFiles,14,4);
 
-xmlFileNames = cell(1,length(xmlFiles));
-xmlFilePatIDs = cell(1,length(xmlFiles));
-for ii = 1:length(xmlFiles)
-    currentFileName = xmlFiles(ii).name;
-    currentPatId = currentFileName(9:end-4);
-    xmlFileNames{ii} = currentFileName;
-    xmlFilePatIDs{ii} = currentPatId;
-end
-xmlFileInfoMap = containers.Map(xmlFilePatIDs,xmlFileNames);
-%%
+allSliceInfoKeys = keys(sliceInfoFileMap);
 
-allDCMkeys = keys(dcmFileInfoMap);
-xmlFilesForDCM = values(xmlFileInfoMap,allDCMkeys);
-allXMLkeys = keys(xmlFileInfoMap);
-dcmFilesForXML = values(dcmFileInfoMap,allXMLkeys);
-
-
-%%
-sliceLoc = load(strcat('randFiles/',file2.name));
-info = xml2struct(strcat('randFiles/',file1.name));
-
-zLocs = sliceLoc.sliceZ;
-outputArray = zeros(512,512,length(zLocs));
+xmlFilesForSliceInfo = values(xmlFileInfoMap,allSliceInfoKeys);
+sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 
 %makes grid of pts
 [XX,YY]=meshgrid(1:512,1:512);
 
+for fileInd = 1:length(xmlFilesForSliceInfo)
+    fileInd
+    
+    clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse XX YY allSliceInfoKeys
+    
+    sliceLoc = load(strcat('DOI_modSliceLoc/',sliceInfoFilesUse{fileInd}));
+    info = xml2struct(strcat('DOI_modXML/',xmlFilesForSliceInfo{fileInd}));
 
-numSessions = length(info.LidcReadMessage.readingSession);
-for sInd = 1:numSessions
-    session = info.LidcReadMessage.readingSession{sInd};
-    if(~isfield(session,'unblindedReadNodule'))
-       continue; 
-    end
-    numNods = length(session.unblindedReadNodule);
-    for nInd = 1:numNods
-        if(numNods > 1)
-            nodule = session.unblindedReadNodule{nInd};
-        elseif(numNods==1)
-            nodule = session.unblindedReadNodule;
+    zLocs = sliceLoc.locData;
+    outputArray = zeros(512,512,length(zLocs));
+
+    numSessions = length(info.LidcReadMessage.readingSession);
+    for sInd = 1:numSessions
+        session = info.LidcReadMessage.readingSession{sInd};
+        if(~isfield(session,'unblindedReadNodule'))
+           continue; 
         end
-        
-        %only used characterized nodules
-        if(isfield(nodule,'characteristics'))
-            malNum = str2double(nodule.characteristics.malignancy.Text);
-            
-            %care about ones where malignancy > 1
-            if(malNum>1)
+        numNods = length(session.unblindedReadNodule);
+        for nInd = 1:numNods
+            if(numNods > 1)
+                nodule = session.unblindedReadNodule{nInd};
+            elseif(numNods==1)
+                nodule = session.unblindedReadNodule;
+            end
+
+            %only used characterized nodules
+            if(isfield(nodule,'characteristics'))
+                malNum = str2double(nodule.characteristics.malignancy.Text);
+
+                %care about ones where malignancy > 0
+                %   malignancy number will be put into pixel
                 numROI = length(nodule.roi);
                 for rInd = 1:numROI
                     curROI = nodule.roi{rInd};
-                    
+
                     curZ = str2double(curROI.imageZposition.Text);
                     zInd = find(zLocs==curZ);
                     numPts = length(curROI.edgeMap);
@@ -86,13 +72,34 @@ for sInd = 1:numSessions
 
                     %makes binary matrix, 1 means inside polygon. 0 otherwise
                     inMatrix = inpolygon(XX,YY,xPt,yPt);
-                    
-                    outputArray(:,:,zInd)=double(inMatrix);
+
+                    currentSlice = outputArray(:,:,zInd);
+
+                    if(strcmpi(curROI.inclusion.Text,'FALSE'))
+                        %exclude the ROI pixels
+                        inMatrix2 = double(inMatrix).*(-0.5);
+                    else
+                        inMatrix2 = double(inMatrix).*malNum;
+
+                    end
+
+                    newSlice = currentSlice+inMatrix2;
+                    outputArray(:,:,zInd)=newSlice;
                 end
+
+
             end
-            
-            
         end
+
     end
+
+    finalOutput = double(outputArray>0);
+    finalOutputSparse = cell(1,size(finalOutput,3));
+    for spInd = 1:size(finalOutput,3)
+       finalOutputSparse{spInd} = sparse(finalOutput(:,:,spInd)); 
+    end
+
+    outputFile = strcat('DOI_modNodule/binaryNoduleMatrix_',allSliceInfoKeys{fileInd},'.mat');
+    save(outputFile,'finalOutputSparse');
     
 end
