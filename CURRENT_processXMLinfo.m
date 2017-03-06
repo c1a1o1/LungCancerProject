@@ -22,7 +22,7 @@ xmlFilesForSliceInfo = values(xmlFileInfoMap,allSliceInfoKeys);
 sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 
 %makes grid of pts
-[XX,YY]=meshgrid(1:512,1:512);
+[YY,XX]=meshgrid(1:512,1:512);
 
 for fileInd = 1:length(xmlFilesForSliceInfo)
     fileInd
@@ -57,21 +57,34 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
                 %   malignancy number will be put into pixel
                 numROI = length(nodule.roi);
                 for rInd = 1:numROI
-                    curROI = nodule.roi{rInd};
+                    if(numROI>1)
+                        curROI = nodule.roi{rInd};
+                    else
+                        curROI=nodule.roi;
+                    end
 
                     curZ = str2double(curROI.imageZposition.Text);
                     zInd = find(zLocs==curZ);
                     numPts = length(curROI.edgeMap);
                     xPt = zeros(1,numPts);
                     yPt = zeros(1,numPts);
-
-                    for ii = 1:numPts
-                       xPt(ii) = str2double(curROI.edgeMap{ii}.xCoord.Text); 
-                       yPt(ii) = str2double(curROI.edgeMap{ii}.yCoord.Text); 
+                    
+                    if(numPts > 1)
+                        for ii = 1:numPts
+                           xPt(ii) = str2double(curROI.edgeMap{ii}.xCoord.Text); 
+                           yPt(ii) = str2double(curROI.edgeMap{ii}.yCoord.Text); 
+                           
+                           %makes binary matrix, 1 means inside polygon. 0 otherwise
+                            inMatrix = inpolygon(XX,YY,xPt,yPt);
+                        end
+                    else
+                        xCoord = str2double(curROI.edgeMap.xCoord.Text);
+                        yCoord = str2double(curROI.edgeMap.yCoord.Text);
+                        inMatrix = false(512,512);
+                        inMatrix(yCoord-1:yCoord+1,xCoord-1:xCoord+1)=true;
                     end
 
-                    %makes binary matrix, 1 means inside polygon. 0 otherwise
-                    inMatrix = inpolygon(XX,YY,xPt,yPt);
+                    
 
                     currentSlice = outputArray(:,:,zInd);
 

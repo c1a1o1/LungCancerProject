@@ -17,15 +17,15 @@ def get_3d_data(path):
     volumeHU = rawVolume*slice1.RescaleSlope + slice1.RescaleIntercept
     spacingXY = slice1.PixelSpacing
     spacingZ = slice1.SliceThickness
-    resizedVolumeHU = zoom(volumeHU,(spacingXY[0],spacingXY[1],spacingZ))
-    return resizedVolumeHU
+    spacingXYZ = [spacingXY[0],spacingXY[1],spacingZ]
+    return volumeHU,spacingXYZ
     #return [s.SliceLocation for s in slices],np.stack([s.pixel_array for s in slices]),slices[0]
 
 
 startDir = '/home/zdestefa/LUNA16/data/DOI'
 
-targetDir = '/home/zdestefa/LUNA16/data/DOI_resizedHU'
-targetDir2 = '/home/zdestefa/LUNA16/data/DOI_resizedHUmat'
+targetDir = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo'
+targetDir2 = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfoMatlab'
 
 cases = os.listdir(startDir)
 
@@ -47,9 +47,11 @@ for root,dirs,files in os.walk(startDir):
         if curNumDcm>10 and curNumXML>0:
             print('Now processing patient ' + str(numPt))
             numPt = numPt+1
-            pixelArray = get_3d_data(curDir)
-            pixelFile = os.path.join(targetDir,'resizedHUarray_'+name+'.npy')
-            #pixelFile2 = os.path.join(targetDir2, 'resizedHUarray_' + name + '.mat')
-            np.save(pixelFile,pixelArray)
-            #sio.savemat(pixelFile2,{"pixelArray":pixelArray})
+            pixelArray,resizeArray = get_3d_data(curDir)
+            #pixelFile = os.path.join(targetDir2,'HUarray_'+name+'.npy')
+            #resizeFile = os.path.join(targetDir2, 'resizeTuple_' + name + '.npy')
+            outputMATfile = os.path.join(targetDir2, 'HUarrayResizeInfo_' + name + '.mat')
+            #np.save(pixelFile,pixelArray)
+            #np.save(resizeFile,resizeArray)
+            sio.savemat(outputMATfile,{"pixelArray":pixelArray,"resizeArray":resizeArray})
 
