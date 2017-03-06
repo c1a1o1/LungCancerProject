@@ -13,8 +13,15 @@ end
 
 %%
 
-load('tempTest/binaryNoduleMatrix_1.3.6.1.4.1.14519.5.2.1.6279.6001.100684836163890911914061745866.mat');
-load('tempTest/HUarrayResizeInfo_1.3.6.1.4.1.14519.5.2.1.6279.6001.100684836163890911914061745866.mat');
+%load('tempTest/binaryNoduleMatrix_1.3.6.1.4.1.14519.5.2.1.6279.6001.100684836163890911914061745866.mat');
+%load('tempTest/HUarrayResizeInfo_1.3.6.1.4.1.14519.5.2.1.6279.6001.100684836163890911914061745866.mat');
+
+%load('tempTest/binaryNoduleMatrix_1.3.6.1.4.1.14519.5.2.1.6279.6001.102681962408431413578140925249.mat');
+%load('tempTest/HUarrayResizeInfo_1.3.6.1.4.1.14519.5.2.1.6279.6001.102681962408431413578140925249.mat');
+
+load('tempTest/binaryNoduleMatrix_1.3.6.1.4.1.14519.5.2.1.6279.6001.102962801900681595502684962582.mat');
+load('tempTest/HUarrayResizeInfo_1.3.6.1.4.1.14519.5.2.1.6279.6001.102962801900681595502684962582.mat');
+
 
 displayBinaryArray = zeros(512,512,length(finalOutputSparse));
 for ii = 1:length(finalOutputSparse)
