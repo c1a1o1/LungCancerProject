@@ -24,7 +24,7 @@ sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 %makes grid of pts
 [YY,XX]=meshgrid(1:512,1:512);
 
-for fileInd = 1:length(xmlFilesForSliceInfo)
+for fileInd = 102:length(xmlFilesForSliceInfo)
     fileInd
     
     clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse XX YY allSliceInfoKeys
@@ -34,6 +34,10 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
 
     zLocs = sliceLoc.locData;
     outputArray = zeros(512,512,length(zLocs));
+    
+    if(~isfield(info.LidcReadMessage,'readingSession'))
+       continue; 
+    end
 
     numSessions = length(info.LidcReadMessage.readingSession);
     for sInd = 1:numSessions
