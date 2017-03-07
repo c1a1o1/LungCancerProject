@@ -24,7 +24,7 @@ sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 %makes grid of pts
 [YY,XX]=meshgrid(1:512,1:512);
 
-for fileInd = 102:length(xmlFilesForSliceInfo)
+for fileInd = 215:length(xmlFilesForSliceInfo)
     fileInd
     
     clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse XX YY allSliceInfoKeys
@@ -55,6 +55,11 @@ for fileInd = 102:length(xmlFilesForSliceInfo)
 
             %only used characterized nodules
             if(isfield(nodule,'characteristics'))
+                
+                if(~isfield(nodule.characteristics,'malignancy'))
+                    continue;
+                end
+                
                 malNum = str2double(nodule.characteristics.malignancy.Text);
 
                 %care about ones where malignancy > 0
