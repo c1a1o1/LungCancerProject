@@ -9,14 +9,25 @@ from scipy.ndimage.interpolation import zoom
 #fig = plt.figure()
 #ax = fig.add_subplot(111, projection='3d')
 
+def getRandomIndices(currentArrayLength,otherArrayLength,minNumSamples):
+    numSamplesUse=otherArrayLength
+    if(currentArrayLength<minNumSamples or currentArrayLength<=otherArrayLength):
+        #if the current array has few entries, don't need to sample from it
+        return range(currentArrayLength)
+    elif(otherArrayLength<minNumSamples):
+        #if the other array is small, then sample more than its length
+        numSamplesUse = minNumSamples
+    return np.random.choice(range(currentArrayLength), numSamplesUse, replace=False)
+
 curDir = '/home/zdestefa/LUNA16/data/DOI_modNodule'
 #curDir = 'D:\dev\git\LungCancerProject\DOI_modNodule'
 
 print('Loading Binary Array')
 
 matFiles = os.listdir(curDir)
+minNumSamplesUse = 30
 
-for fInd in range(5,len(matFiles)):
+for fInd in range(1,len(matFiles)):
     print('Now Processing File ' + str(fInd) + ' of ' + str(len(matFiles)))
 
     curFile = os.path.join(curDir,matFiles[fInd])
@@ -115,7 +126,21 @@ for fInd in range(5,len(matFiles)):
             numPossibleLungValues.append(numPossibleLung)
 
     numNoduleBlocks = len(huBlocksNodule)
+    numNoNoduleBlocks = len(huBlocksNoNoduleLung)
+    numNoNoduleNoLungBlocks = len(huBlocksNoNoduleNoLung)
 
+    huBlocksNoNoduleLungOut = []
+    binBlocksNoNoduleLungOut = []
+    huBlocksNoNoduleNoLungOut = []
+    binBlocksNoNoduleNoLungOut = []
+
+    for ind1 in getRandomIndices(numNoNoduleBlocks,numNoduleBlocks,minNumSamplesUse):
+        huBlocksNoNoduleLungOut.append(huBlocksNoNoduleLung[ind1])
+        binBlocksNoNoduleLungOut.append(binBlocksNoNoduleLung[ind1])
+    for ind2 in getRandomIndices(numNoNoduleNoLungBlocks,numNoduleBlocks,minNumSamplesUse):
+        huBlocksNoNoduleNoLungOut.append(huBlocksNoNoduleNoLung[ind2])
+        binBlocksNoNoduleNoLungOut.append(binBlocksNoNoduleNoLung[ind2])
+    """
     huBlocksNoNoduleLungOut = []
     binBlocksNoNoduleLungOut = []
     if(numNoduleBlocks < len(huBlocksNoNoduleLung)):
@@ -138,7 +163,7 @@ for fInd in range(5,len(matFiles)):
     else:
         huBlocksNoNoduleNoLungOut=huBlocksNoNoduleNoLung
         binBlocksNoNoduleNoLungOut=binBlocksNoNoduleNoLung
-
+    """
     outFile = '/home/zdestefa/LUNA16/data/DOI_huBlockDataSet/huBlocks_'+patID+'.mat'
     sio.savemat(outFile,{
         "binarySum":binarySumValues,
