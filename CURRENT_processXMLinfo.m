@@ -24,8 +24,8 @@ sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 %makes grid of pts
 [YY,XX]=meshgrid(1:512,1:512);
 
-%for fileInd = 215:length(xmlFilesForSliceInfo)
-for fileInd = floor(rand*length(xmlFilesForSliceInfo)+1)
+for fileInd = 1:length(xmlFilesForSliceInfo)
+%for fileInd = floor(rand*length(xmlFilesForSliceInfo)+1)
     fileInd
     
     clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse XX YY allSliceInfoKeys
