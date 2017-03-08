@@ -24,7 +24,8 @@ sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 %makes grid of pts
 [YY,XX]=meshgrid(1:512,1:512);
 
-for fileInd = 215:length(xmlFilesForSliceInfo)
+%for fileInd = 215:length(xmlFilesForSliceInfo)
+for fileInd = floor(rand*length(xmlFilesForSliceInfo)+1)
     fileInd
     
     clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse XX YY allSliceInfoKeys
@@ -34,6 +35,9 @@ for fileInd = 215:length(xmlFilesForSliceInfo)
 
     zLocs = sliceLoc.locData;
     outputArray = zeros(512,512,length(zLocs));
+    
+    roiInfo = cell(1,3);
+    roiInfoInd=1;
     
     if(~isfield(info.LidcReadMessage,'readingSession'))
        continue; 
@@ -86,14 +90,20 @@ for fileInd = 215:length(xmlFilesForSliceInfo)
                            %makes binary matrix, 1 means inside polygon. 0 otherwise
                             inMatrix = inpolygon(XX,YY,xPt,yPt);
                         end
+                        currentBlob.center = [mean(xPt) mean(yPt) zInd];
+                        currentBlob.radius = max(1,sqrt(sum(inMatrix(:))/pi));
                     else
                         xCoord = str2double(curROI.edgeMap.xCoord.Text);
                         yCoord = str2double(curROI.edgeMap.yCoord.Text);
                         inMatrix = false(512,512);
                         inMatrix(yCoord-1:yCoord+1,xCoord-1:xCoord+1)=true;
+                        currentBlob.center = [xCoord yCoord zInd];
+                        currentBlob.radius = 1;
                     end
 
-                    
+                    currentBlob.cancerLikelihood = malNum;
+                    roiInfo{roiInfoInd}=currentBlob;
+                    roiInfoInd = roiInfoInd+1;
 
                     currentSlice = outputArray(:,:,zInd);
 
@@ -117,11 +127,13 @@ for fileInd = 215:length(xmlFilesForSliceInfo)
 
     finalOutput = double(outputArray>0);
     finalOutputSparse = cell(1,size(finalOutput,3));
+    outputSparse = cell(1,size(finalOutput,3));
     for spInd = 1:size(finalOutput,3)
        finalOutputSparse{spInd} = sparse(finalOutput(:,:,spInd)); 
+       outputSparse{spInd} = sparse(outputArray(:,:,spInd));
     end
 
     outputFile = strcat('DOI_modNodule/binaryNoduleMatrix_',allSliceInfoKeys{fileInd},'.mat');
-    save(outputFile,'finalOutputSparse');
+    save(outputFile,'finalOutputSparse','outputSparse','roiInfo');
     
 end

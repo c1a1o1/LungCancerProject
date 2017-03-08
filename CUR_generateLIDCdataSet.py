@@ -85,7 +85,7 @@ for fInd in range(1,len(matFiles)):
     binBlocksNodule = []
     binBlocksNoNoduleLung = []
     binBlocksNoNoduleNoLung = []
-    binarySumThreshold =1
+    binarySumThreshold =100
     numPossibleLungThreshold = np.floor(64*64*64*0.01)
     for ii in range(numSampledPts):
         curPt = finalSamples[ii,:]
