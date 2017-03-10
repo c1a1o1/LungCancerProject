@@ -9,8 +9,6 @@ allSliceInfoKeys = keys(sliceInfoFileMap);
 xmlFilesForSliceInfo = values(xmlFileInfoMap,allSliceInfoKeys);
 sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
 
-%makes grid of pts
-[YY,XX]=meshgrid(1:512,1:512);
 
 for fileInd = 1:length(xmlFilesForSliceInfo)
 %for fileInd = floor(rand*length(xmlFilesForSliceInfo)+1)
@@ -24,7 +22,7 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
     zLocs = sliceLoc.locData;
     outputArray = zeros(512,512,length(zLocs));
     
-    roiInfo = cell(1,3);
+    roiInfo = cell(0);
     roiInfoInd=1;
     
     if(~isfield(info.LidcReadMessage,'readingSession'))
@@ -63,6 +61,11 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
                     else
                         curROI=nodule.roi;
                     end
+                    
+                    if(strcmpi(curROI.inclusion.Text,'FALSE'))
+                        %exclude this ROI
+                        continue;
+                    end
 
                     curZ = str2double(curROI.imageZposition.Text);
                     zInd = find(zLocs==curZ);
@@ -74,17 +77,13 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
                         for ii = 1:numPts
                            xPt(ii) = str2double(curROI.edgeMap{ii}.xCoord.Text); 
                            yPt(ii) = str2double(curROI.edgeMap{ii}.yCoord.Text); 
-                           
-                           %makes binary matrix, 1 means inside polygon. 0 otherwise
-                            inMatrix = inpolygon(XX,YY,xPt,yPt);
                         end
+                        currentArea = polyarea(xPt,yPt);
                         currentBlob.center = [mean(xPt) mean(yPt) zInd];
-                        currentBlob.radius = max(1,sqrt(sum(inMatrix(:))/pi));
+                        currentBlob.radius = max(1,sqrt(currentArea)/pi);
                     else
                         xCoord = str2double(curROI.edgeMap.xCoord.Text);
                         yCoord = str2double(curROI.edgeMap.yCoord.Text);
-                        inMatrix = false(512,512);
-                        inMatrix(yCoord-1:yCoord+1,xCoord-1:xCoord+1)=true;
                         currentBlob.center = [xCoord yCoord zInd];
                         currentBlob.radius = 1;
                     end
@@ -92,19 +91,6 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
                     currentBlob.cancerLikelihood = malNum;
                     roiInfo{roiInfoInd}=currentBlob;
                     roiInfoInd = roiInfoInd+1;
-
-                    currentSlice = outputArray(:,:,zInd);
-
-                    if(strcmpi(curROI.inclusion.Text,'FALSE'))
-                        %exclude the ROI pixels
-                        inMatrix2 = double(inMatrix).*(-0.5);
-                    else
-                        inMatrix2 = double(inMatrix).*malNum;
-
-                    end
-
-                    newSlice = currentSlice+inMatrix2;
-                    outputArray(:,:,zInd)=newSlice;
                 end
 
 
@@ -113,15 +99,26 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
 
     end
 
-    finalOutput = double(outputArray>0);
-    finalOutputSparse = cell(1,size(finalOutput,3));
-    outputSparse = cell(1,size(finalOutput,3));
-    for spInd = 1:size(finalOutput,3)
-       finalOutputSparse{spInd} = sparse(finalOutput(:,:,spInd)); 
-       outputSparse{spInd} = sparse(outputArray(:,:,spInd));
+    outputFile = strcat('DOI_modNoduleInfo/noduleInformation_',allSliceInfoKeys{fileInd},'.mat');
+    
+    numROIfound = roiInfoInd-1;
+    if(numROIfound > 0)
+       malignancies = zeros(numROIfound,1);
+       nodCenters = zeros(numROIfound,3);
+       nodRadii = zeros(numROIfound,1);
+       for ii = 1:numROIfound
+          malignancies(ii)=roiInfo{ii}.cancerLikelihood;
+          nodCenters(ii,:)=roiInfo{ii}.center;
+          nodRadii(ii,:)=roiInfo{ii}.radius;
+       end
+       
+       save(outputFile,'roiInfo','malignancies','nodCenters','nodRadii');
+       
+    else
+        save(outputFile,'roiInfo');
     end
-
-    outputFile = strcat('DOI_modNodule/binaryNoduleMatrix_',allSliceInfoKeys{fileInd},'.mat');
-    save(outputFile,'finalOutputSparse','outputSparse','roiInfo');
+    
+    
+    
     
 end
