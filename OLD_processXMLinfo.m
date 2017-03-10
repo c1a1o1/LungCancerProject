@@ -1,5 +1,17 @@
+%file1 = dir('randFiles/*.xml');
+%file2 = dir('randFiles/*.mat');
+
+%dcmInfoFiles = dir('DOI_dcmInfo/*.mat');
 sliceInfoFiles = dir('DOI_modSliceLoc/*.mat');
 xmlFiles = dir('DOI_modXML/*.xml');
+
+%{
+filex = dcmInfoFiles(1).name;
+filex(13:end-4); %gets the patient ID 
+
+filey = xmlFiles(1).name;
+filey(9:end-4); %gets the patient ID
+%}
 
 xmlFileInfoMap = getFileNameDict(xmlFiles,9,4);
 sliceInfoFileMap = getFileNameDict(sliceInfoFiles,14,4);
