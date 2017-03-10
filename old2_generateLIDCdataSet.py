@@ -19,7 +19,7 @@ def getRandomIndices(currentArrayLength,otherArrayLength,minNumSamples):
         numSamplesUse = minNumSamples
     return np.random.choice(range(currentArrayLength), numSamplesUse, replace=False)
 
-curDir = '/home/zdestefa/LUNA16/data/DOI_modNoduleInfo'
+curDir = '/home/zdestefa/LUNA16/data/DOI_modNodule'
 #curDir = 'D:\dev\git\LungCancerProject\DOI_modNodule'
 
 print('Loading Binary Array')
