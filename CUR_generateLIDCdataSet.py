@@ -44,6 +44,23 @@ for fInd in range(len(matFiles)):
     initPointsForSample = []
     cancerLikelihoods = []
 
+    rawRadArray = matData['nodRadii']
+    radArray = np.reshape(rawRadArray,len(rawRadArray))
+    rawMalArray = matData['malignancies']
+    malArray = np.reshape(rawMalArray,len(rawMalArray))
+
+    #obtain a list sorted by malignancy number first, then nodule radius
+    dtype = [('mal', int), ('rad', float)]
+    values = [(malArray[jj], radArray[jj]) for jj in range(len(radArray))]
+    malRadArray = np.array(values, dtype=dtype)
+    indsUse = list(reversed(np.argsort(malRadArray,order=['mal','rad'])))
+
+    regCenters = matData['nodCenters']
+    for nInd in indsUse:
+        initPointsForSample.append(regCenters[nInd])
+        cancerLikelihoods.append(malArray[nInd])
+
+    """
     for regionInd in range(len(matData['roiInfo'][0])):
         if(hasattr(matData['roiInfo'][0][0],'radius')):
             regRadius = matData['roiInfo'][0][regionInd]['radius'][0, 0][0][0]
@@ -55,7 +72,7 @@ for fInd in range(len(matFiles)):
             if(regCancerLikelihood>2 or regRadius>4):
                 initPointsForSample.append(regCenter)
             cancerLikelihoods.append(regCancerLikelihood)
-
+    """
 
     huData = np.load(huDataFileNm)
     resizeData = np.load(resizeFileNm)
