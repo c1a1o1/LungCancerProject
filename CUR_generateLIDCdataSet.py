@@ -2,36 +2,19 @@ import numpy as np
 import os
 import scipy.io as sio
 import numpy.matlib
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from scipy.ndimage.interpolation import zoom
 
-#fig = plt.figure()
-#ax = fig.add_subplot(111, projection='3d')
-
-def getRandomIndices(currentArrayLength,otherArrayLength,minNumSamples):
-    numSamplesUse=otherArrayLength
-    if(currentArrayLength<minNumSamples or currentArrayLength<=otherArrayLength):
-        #if the current array has few entries, don't need to sample from it
-        return range(currentArrayLength)
-    elif(otherArrayLength<minNumSamples):
-        #if the other array is small, then sample more than its length
-        numSamplesUse = minNumSamples
-    return np.random.choice(range(currentArrayLength), numSamplesUse, replace=False)
-
 curDir = '/home/zdestefa/LUNA16/data/DOI_modNoduleInfo'
-#curDir = 'D:\dev\git\LungCancerProject\DOI_modNodule'
 
 print('Loading Binary Array')
 
 matFiles = os.listdir(curDir)
-minNumSamplesUse = 30
 
 for fInd in range(len(matFiles)):
     print('Now Processing File ' + str(fInd) + ' of ' + str(len(matFiles)))
 
     curFile = os.path.join(curDir,matFiles[fInd])
-    patID = matFiles[fInd][19:len(matFiles[fInd])-4]
+    patID = matFiles[fInd][18:len(matFiles[fInd])-4]
 
     huDataFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/HUarray_'
     resizeTupleFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/resizeTuple_'
@@ -39,52 +22,36 @@ for fInd in range(len(matFiles)):
     huDataFileNm = huDataFilePrefix+patID+'.npy'
     resizeFileNm = resizeTupleFilePrefix+patID+'.npy'
 
-    matData = sio.loadmat(curFile)
-    binArray = matData['finalOutputSparse'][0]
+
     initPointsForSample = []
     cancerLikelihoods = []
+    noduleRadii = []
 
-    rawRadArray = matData['nodRadii']
-    radArray = np.reshape(rawRadArray,len(rawRadArray))
-    rawMalArray = matData['malignancies']
-    malArray = np.reshape(rawMalArray,len(rawMalArray))
+    matData = sio.loadmat(curFile)
+    if(hasattr(matData,'nodRadii')):
+        rawRadArray = matData['nodRadii']
+        radArray = np.reshape(rawRadArray,len(rawRadArray))
+        rawMalArray = matData['malignancies']
+        malArray = np.reshape(rawMalArray,len(rawMalArray))
+        regCenters = matData['nodCenters']
 
-    #obtain a list sorted by malignancy number first, then nodule radius
-    dtype = [('mal', int), ('rad', float)]
-    values = [(malArray[jj], radArray[jj]) for jj in range(len(radArray))]
-    malRadArray = np.array(values, dtype=dtype)
-    indsUse = list(reversed(np.argsort(malRadArray,order=['mal','rad'])))
+        #obtain a list sorted by malignancy number first, then nodule radius
+        dtype = [('mal', int), ('rad', float)]
+        values = [(malArray[jj], radArray[jj]) for jj in range(len(radArray))]
+        malRadArray = np.array(values, dtype=dtype)
+        indsUse = list(reversed(np.argsort(malRadArray,order=['mal','rad'])))
 
-    regCenters = matData['nodCenters']
-    for nInd in indsUse:
-        initPointsForSample.append(regCenters[nInd])
-        cancerLikelihoods.append(malArray[nInd])
-
-    """
-    for regionInd in range(len(matData['roiInfo'][0])):
-        if(hasattr(matData['roiInfo'][0][0],'radius')):
-            regRadius = matData['roiInfo'][0][regionInd]['radius'][0, 0][0][0]
-            regCenter = [matData['roiInfo'][0][regionInd]['center'][0,0][0][0],
-                         matData['roiInfo'][0][regionInd]['center'][0, 0][0][1],
-                         matData['roiInfo'][0][regionInd]['center'][0, 0][0][2]
-                         ]
-            regCancerLikelihood = matData["roiInfo"][0][regionInd]["cancerLikelihood"][0,0][0][0]
-            if(regCancerLikelihood>2 or regRadius>4):
-                initPointsForSample.append(regCenter)
-            cancerLikelihoods.append(regCancerLikelihood)
-    """
+        for nInd in indsUse:
+            initPointsForSample.append(regCenters[nInd])
+            cancerLikelihoods.append(malArray[nInd])
+            noduleRadii.append(radArray[nInd])
 
     huData = np.load(huDataFileNm)
     resizeData = np.load(resizeFileNm)
 
     print('Binary Array Loaded. Converting to Matrix...')
 
-    binArrayDense = np.zeros((512,512,len(binArray)))
-    for ii in range(len(binArray)):
-        binArrayDense[:,:,ii]=binArray[ii].todense()
-
     huDataResized = zoom(huData,resizeData)
-    binArrayResized = zoom(binArrayDense,resizeData)
 
     #samples random points to use as center of 64x64x64 blocks
     #make sure they are at least 24 pixels apart
@@ -109,7 +76,7 @@ for fInd in range(len(matFiles)):
         samplePointsUse[ii,:] = [
             initPointsForSample[ii][0]*resizeData[0],
             initPointsForSample[ii][1]*resizeData[1],
-            initPointsForSample[ii][2]*resizeData[2],
+            initPointsForSample[ii][2]*resizeData[2]
         ]
     for ii in range(numSampledPts):
         samplePointsUse[ii+numInitPts,:] = finalSamples[ii,:]
@@ -119,22 +86,18 @@ for fInd in range(len(matFiles)):
     prismValid = np.ones(huDataResized.shape)
     finalPts = []
     huDataBlocks = []
-    binaryDataBlocks = []
-    binarySumValues = []
-    numPossibleLungValues = []
-    huBlocksNodule = []
-    huBlocksNoNoduleLung = []
-    huBlocksNoNoduleNoLung = []
-    binBlocksNodule = []
-    binBlocksNoNoduleLung = []
-    binBlocksNoNoduleNoLung = []
-    binarySumThreshold =100
+    outputNumLungPixels = []
+    huBlocks = []
+    outputCancerScores = []
+    outputNoduleRadii = []
     numPossibleLungThreshold = np.floor(64*64*64*0.01)
     for ii in range(samplePointsUse.shape[0]):
         curPt = samplePointsUse[ii,:]
         cancerNum = 0
+        nodRadius = 0
         if(ii<len(initPointsForSample)):
             cancerNum = cancerLikelihoods[ii]
+            nodRadius = noduleRadii[ii]
         curPtR = int(curPt[0])
         curPtC = int(curPt[1])
         curPtS = int(curPt[2])
@@ -149,61 +112,16 @@ for fInd in range(len(matFiles)):
             prismValid[xMin:xMax,yMin:yMax,zMin:zMax] = 0
             currentHUdataBlock = huDataResized[xMin:xMax,yMin:yMax,zMin:zMax]
             huDataBlocks.append(currentHUdataBlock)
-            currentBinaryDataBlock = binArrayResized[xMin:xMax,yMin:yMax,zMin:zMax]
-            binarySum = np.sum(currentBinaryDataBlock)
-            binaryDataBlocks.append(currentBinaryDataBlock)
-            numPossibleLung = 0
-            for block in currentHUdataBlock:
-                for row in block:
-                    for val in row:
-                        if(val>-1200 and val<-700):
-                            numPossibleLung = numPossibleLung+1
-            print("Binary Sum: " + str(binarySum) + " NumLungPixels: " + str(numPossibleLung))
-            if(binarySum>binarySumThreshold or cancerNum>2):
-                huBlocksNodule.append(currentHUdataBlock)
-                binBlocksNodule.append(currentBinaryDataBlock)
-            elif(numPossibleLung>numPossibleLungThreshold):
-                huBlocksNoNoduleLung.append(currentHUdataBlock)
-                binBlocksNoNoduleLung.append(currentBinaryDataBlock)
-            else:
-                huBlocksNoNoduleNoLung.append(currentHUdataBlock)
-                binBlocksNoNoduleNoLung.append(currentBinaryDataBlock)
-            binarySumValues.append(binarySum)
-            numPossibleLungValues.append(numPossibleLung)
-
-    numNoduleBlocks = len(huBlocksNodule)
-    numNoNoduleBlocks = len(huBlocksNoNoduleLung)
-    numNoNoduleNoLungBlocks = len(huBlocksNoNoduleNoLung)
-
-    huBlocksNoNoduleLungOut = []
-    binBlocksNoNoduleLungOut = []
-    huBlocksNoNoduleNoLungOut = []
-    binBlocksNoNoduleNoLungOut = []
-
-    for ind1 in getRandomIndices(numNoNoduleBlocks,numNoduleBlocks,minNumSamplesUse):
-        huBlocksNoNoduleLungOut.append(huBlocksNoNoduleLung[ind1])
-        binBlocksNoNoduleLungOut.append(binBlocksNoNoduleLung[ind1])
-    for ind2 in getRandomIndices(numNoNoduleNoLungBlocks,numNoduleBlocks,minNumSamplesUse):
-        huBlocksNoNoduleNoLungOut.append(huBlocksNoNoduleNoLung[ind2])
-        binBlocksNoNoduleNoLungOut.append(binBlocksNoNoduleNoLung[ind2])
+            numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
+            print(" NumLungPixels: " + str(numPossibleLung))
+            huBlocks.append(currentHUdataBlock)
+            outputCancerScores.append(cancerNum)
+            outputNoduleRadii.append(nodRadius)
+            outputNumLungPixels.append(numPossibleLung)
 
     outFile = '/home/zdestefa/LUNA16/data/DOI_huBlockDataSet/huBlocks_'+patID+'.mat'
     sio.savemat(outFile,{
-        "binarySum":binarySumValues,
-        "huBlocksNodule":huBlocksNodule,
-        "huBlocksNoNoduleLung":huBlocksNoNoduleLungOut,
-        "huBlocksNoNoduleNoLung":huBlocksNoNoduleNoLungOut,
-        "binBlocksNodule":binBlocksNodule,
-        "binBlocksNoNoduleLung":binBlocksNoNoduleLungOut,
-        "binBlocksNoNoduleNoLung":binBlocksNoNoduleNoLungOut,
-        "numLungPixels":numPossibleLungValues,
-        "cancerLikelihoods":cancerLikelihoods})
-
-"""
-finalPtsDisplay = np.zeros((len(finalPts),3))
-for ii in range(len(finalPts)):
-    finalPtsDisplay[ii,:]=finalPts[ii]
-print('Checking validity done. Now displaying samples...')
-ax.scatter(finalPtsDisplay[:,0],finalPtsDisplay[:,1],finalPtsDisplay[:,2])
-plt.show()
-"""
+        "huBlocks":huBlocks,
+        "outputCancerScores":outputCancerScores,
+        "outputNoduleRadii":outputNoduleRadii,
+        "outputNumLungPixels":outputNumLungPixels})
