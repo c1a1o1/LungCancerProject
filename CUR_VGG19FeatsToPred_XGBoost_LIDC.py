@@ -20,20 +20,56 @@ def getFeatureData(fileNm):
     outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData, axis=0)  # this causes potential overfit. should remove
     return outVec
 
+def getBlockInfoData(resNetFileNm):
+    blockDataSuffix = resNetFileNm[12:len(resNetFileNm)]
+    blockDataFileNm = 'blockData_'+blockDataSuffix
+    blockDataFile = os.path.join(dataFolder,blockDataFileNm)
+    infoArray = np.load(blockDataFile)
+    cancerScore = infoArray[0]
+    noduleRadius = infoArray[1]
+    lungPixelNum = infoArray[2]
+    return cancerScore,noduleRadius,lungPixelNum
+
 
 def train_xgboost():
 
     print('Train/Validation Data being obtained')
     files = os.listdir(dataFolder)
-    x = np.zeros((len(files),numConcatFeats))
-    y = np.zeros(len(files))
 
-    for ind in range(len(files)):
-        x[ind,:] = getFeatureData(files[ind])
-        if('_Nodule_' in files[ind]):
-            y[ind] = 1
-        else:
-            y[ind] = 0
+    resNetFiles = [file1 for file1 in files if file1.startswith("resnetFeats")]
+    cancerScores = np.zeros(len(resNetFiles))
+    nodRadii = np.zeros(len(resNetFiles))
+    lungNums = np.zeros(len(resNetFiles))
+    for fInd in range(len(resNetFiles)):
+        cancerScores[fInd],nodRadii[fInd],lungNums[fInd] = getBlockInfoData(resNetFiles[fInd])
+
+    cancerPts = np.where(cancerScores>2)
+    cancerPtsUse = cancerPts
+
+    noCancerPts = np.where(cancerScores<1)
+    lungBlocks = np.where(lungNums>(64*64*64*0.05))
+    otherBlocksInclude = [ptNum for ptNum in noCancerPts if ptNum in lungBlocks]
+    otherPtsUse = otherBlocksInclude
+
+    numCancer = 500
+    numOther = 500
+    if(numCancer < len(cancerPts)):
+        cancerInds = np.random.choice(range(len(cancerPts)), size=numCancer, replace=False)
+        cancerPtsUse = cancerPts[cancerInds]
+    if(numOther < len(otherBlocksInclude)):
+        otherInds = np.random.choice(range(len(otherBlocksInclude)),size=numOther,replace=False)
+        otherPtsUse = otherBlocksInclude[otherInds]
+
+    numDataPts = len(cancerPtsUse)+len(otherPtsUse)
+    x = np.zeros((numDataPts,numConcatFeats))
+    y = np.zeros(numDataPts)
+
+    for ind in range(len(cancerPtsUse)):
+        x[ind,:] = getFeatureData(resNetFiles[cancerPtsUse[ind]])
+        y[ind] = 1
+    for ind in range(len(otherPtsUse)):
+        x[ind+len(cancerPtsUse),:] = getFeatureData(resNetFiles[otherPtsUse[ind]])
+        y[ind+len(cancerPtsUse)] = 0
 
     print('Finished getting train/test data')
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
