@@ -8,13 +8,15 @@ allSliceInfoKeys = keys(sliceInfoFileMap);
 
 xmlFilesForSliceInfo = values(xmlFileInfoMap,allSliceInfoKeys);
 sliceInfoFilesUse = values(sliceInfoFileMap,allSliceInfoKeys);
-
+malInfo = cell(1,length(xmlFilesForSliceInfo));
+centerInfo = cell(1,length(xmlFilesForSliceInfo));
+radInfo= cell(1,length(xmlFilesForSliceInfo));
 
 for fileInd = 1:length(xmlFilesForSliceInfo)
 %for fileInd = floor(rand*length(xmlFilesForSliceInfo)+1)
     fileInd
     
-    clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse XX YY allSliceInfoKeys
+    clearvars -except fileInd xmlFilesForSliceInfo sliceInfoFilesUse centerInfo malInfo radInfo allSliceInfoKeys
     
     sliceLoc = load(strcat('DOI_modSliceLoc/',sliceInfoFilesUse{fileInd}));
     info = xml2struct(strcat('DOI_modXML/',xmlFilesForSliceInfo{fileInd}));
@@ -102,23 +104,36 @@ for fileInd = 1:length(xmlFilesForSliceInfo)
     outputFile = strcat('DOI_modNoduleInfo/noduleInformation_',allSliceInfoKeys{fileInd},'.mat');
     
     numROIfound = roiInfoInd-1;
+    malignancies = zeros(numROIfound,1);
+   nodCenters = zeros(numROIfound,3);
+   nodRadii = zeros(numROIfound,1);
     if(numROIfound > 0)
-       malignancies = zeros(numROIfound,1);
-       nodCenters = zeros(numROIfound,3);
-       nodRadii = zeros(numROIfound,1);
        for ii = 1:numROIfound
           malignancies(ii)=roiInfo{ii}.cancerLikelihood;
           nodCenters(ii,:)=roiInfo{ii}.center;
           nodRadii(ii,:)=roiInfo{ii}.radius;
        end
-       
-       save(outputFile,'roiInfo','malignancies','nodCenters','nodRadii');
-       
-    else
-        save(outputFile,'roiInfo');
     end
+    save(outputFile,'roiInfo','malignancies','nodCenters','nodRadii');
     
-    
+    centerInfo{fileInd}=nodCenters;
+    radInfo{fileInd}=nodRadii;
+    malInfo{fileInd}=malignancies;
     
     
 end
+
+save('ALLFILES_infoFromXML.mat','centerInfo','radInfo','malInfo','allSliceInfoKeys');
+
+%{
+malArray = [];
+for ii = 1:length(malInfo)
+    currentArr = malInfo{ii};
+    if(~isempty(currentArr))
+       malArray = [malArray currentArr(:)'];
+    end
+end
+%}
+
+
+

@@ -78,8 +78,7 @@ def getResNetData(curData):
             img = cv2.equalizeHist(img.astype(np.uint8))
             img = img[dx: ds - dx, dx: ds - dx]
             img = cv2.resize(img, (224, 224))
-            img2 = imresize(img, (224, 224))
-            tmp.append(img2)
+            tmp.append(img)
         tmp = np.array(tmp)
         batch.append(np.array(tmp))
     batch = np.array(batch)
@@ -88,15 +87,12 @@ def getResNetData(curData):
     return feats2,feats3
 
 def calc_featuresA():
-    numFiles = 0
-    while numFiles < 1017:
-        filesToProcess = os.listdir(fileFolder)
-        numFiles = len(filesToProcess)
-        curInd = 0
-        for fileP in filesToProcess:
-            curInd = curInd + 1
-            print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
-            genResNetFeatFile(fileP)
+    filesToProcess = os.listdir(fileFolder)
+    numFiles = len(filesToProcess)
+    # for fileP in filesToProcess:
+    for curInd in range(800,numFiles):
+        print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
+        genResNetFeatFile(filesToProcess[curInd])
 
 
 
