@@ -26,56 +26,48 @@ fileFolder = '/home/zdestefa/LUNA16/data/DOI_huBlockDataSet'
 
 def getVolData(fileP):
     curMATcontent = sio.loadmat(os.path.join(fileFolder,fileP))
-    volData = curMATcontent["huBlocksOutput"]
+    volData = curMATcontent["huBlocks"]
     numHU = len(volData)
     cancerData = np.reshape(curMATcontent["outputCancerScores"],numHU)
-    return volData.astype('float32'),cancerData
+    noduleData = np.reshape(curMATcontent["outputNoduleRadii"],numHU)
+    lungData = np.reshape(curMATcontent["outputNumLungPixels"],numHU)
+    return volData.astype('float32'),cancerData,noduleData,lungData
 
 origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 
 #net2 = Model(input=origNet.input,output=origNet.get_layer('flatten').output)
 net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
 
-
-#values for rotation
-kValues = [0,1,2,3,1,2,3,1,2,3]
-axesValues = [(0,1),(0,1),(0,1),(0,1),(1,2),(1,2),(1,2),(0,2),(0,2),(0,2)]
-
 def genResNetFeatFile(fileP):
     patID = fileP[9:len(fileP) - 4]
-    huBlocks,cancer= getVolData(fileP)
+    huBlocks,cancer,nod,lung = getVolData(fileP)
+    folder25088prefix = 'data/blockFilesResizedVGG19to25088/'
     rPrefix = 'resnetFeats_'
+    bPrefix = 'blockData_'
     folder4096prefix = 'data/blockFilesResizedVGG19to4096/'
-    blockNum=0
     for nodInd in range(len(huBlocks)):
         curData = huBlocks[nodInd,:,:,:]
         cancerNum = cancer[nodInd]
 
+
+        noduleSuffix = '_Block_' + str(nodInd)
         if(cancerNum>0):
             labelSuffix = '_label0.npy'
         else:
             labelSuffix = '_label1.npy'
 
-        #data augmentation step. rotate them randomly
-        if(cancerNum>0):
-            numExtra = np.floor(np.random.rand(1)[0]*4) + 5 #do 5-9 extra rotations
-        else:
-            numExtra = np.floor(np.random.rand(1)[0] * 4) + 1 #do 1-3 extra rots
-        numExtra = int(numExtra)
-        rotInds = np.random.choice(range(1,10), numExtra+1, replace=False)
-        rotInds[0]=0
+        #fileName2 = folder25088prefix + rPrefix + patID + noduleSuffix + labelSuffix
+        fileName3 = folder4096prefix + rPrefix +patID + noduleSuffix + labelSuffix
+        # fileName2A = folder25088prefix + bPrefix + patID + noduleSuffix + labelSuffix
+        #fileName3A = folder4096prefix + bPrefix + patID + noduleSuffix + labelSuffix
 
-        for rot in rotInds:
-            noduleSuffix = '_Block_' + str(blockNum)
-            blockNum = blockNum+1
-            fileName3 = folder4096prefix + rPrefix +patID + noduleSuffix + labelSuffix
-            currentBlock = np.rot90(curData,k=kValues[rot],axes=axesValues[rot])
-            print("obtaining resnet data for block: " + str(blockNum))
-            feats3 = getResNetData(currentBlock)
-            np.save(fileName3, feats3)
+        feats3 = getResNetData(curData)
+        #np.save(fileName2, feats2)
+        np.save(fileName3, feats3)
 
-        if(blockNum>50):
-            break
+        #outputBlockData = [cancer[nodInd], nod[nodInd], lung[nodInd]]
+        #np.save(fileName2A, outputBlockData)
+        #np.save(fileName3A, outputBlockData)
 
 cnt = 0
 dx = 40
@@ -83,27 +75,18 @@ ds = 512
 
 def getResNetData(curData):
     curImg = curData
-    #curImg[curImg==-2000]=0
+    curImg[curImg==-2000]=0
     batch = []
-    #for i in range(0, curData.shape[0] - 3, 3):
     for i in range(curData.shape[2]):
         tmp = []
+        img = curImg[i]
+        img = 255.0 / np.amax(img) * img
+        img = cv2.equalizeHist(img.astype(np.uint8))
+        img = img[dx: ds - dx, dx: ds - dx]
+        img = cv2.resize(img, (224, 224))
         for j in range(3):
-            img = curImg[i]
-            #
-            #NOTE: DO NOT DO THE EQUALIZEHIST PROCEDURE
-            #   RESULTS ARE DRAMATICALLY BETTER WITHOUT IT
-            #   WENT FROM 0.52 LOG LOSS TO 0.33 LOG LOSS
-            #
-            #RESULTS ARE ALSO MUCH BETTER REPLACIATING THE IMAGE
-            #   IN EACH CHANNEL RATHER THAN TRY TO COMBINE
-            #   IMAGES IN THE COLOR CHANNELS
-            #
-            #img = 255.0 / np.amax(img) * img
-            #img = cv2.equalizeHist(img.astype(np.uint8))
-            #img = img[dx: ds - dx, dx: ds - dx]
-            img = cv2.resize(img, (224, 224))
             tmp.append(img)
+        tmp = np.array(tmp)
         batch.append(np.array(tmp))
     batch = np.array(batch)
     #feats2 = net2.predict(batch)
@@ -113,7 +96,8 @@ def getResNetData(curData):
 def calc_featuresA():
     filesToProcess = os.listdir(fileFolder)
     numFiles = len(filesToProcess)
-    for curInd in range(30,numFiles):
+    # for fileP in filesToProcess:
+    for curInd in range(800,numFiles):
         print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
         genResNetFeatFile(filesToProcess[curInd])
 
