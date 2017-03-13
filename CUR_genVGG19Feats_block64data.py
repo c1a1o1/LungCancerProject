@@ -112,10 +112,12 @@ def getResNetData(curData):
 
 def calc_featuresA():
     filesToProcess = os.listdir(fileFolder)
-    numFiles = len(filesToProcess)
-    for curInd in range(30,numFiles):
-        print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
-        genResNetFeatFile(filesToProcess[curInd])
+    numFiles = 0
+    while(numFiles<1017):
+        numFiles = len(filesToProcess)
+        for curInd in range(numFiles):
+            print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
+            genResNetFeatFile(filesToProcess[curInd])
 
 
 
