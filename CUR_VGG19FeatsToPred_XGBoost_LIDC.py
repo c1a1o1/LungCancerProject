@@ -31,17 +31,33 @@ def train_xgboost():
 
     numZero = 0
     numOne = 0
+    indsZero = []
+    indsOne = []
     for ind in range(numDataPts):
         x[ind,:] = getFeatureData(resNetFiles[ind])
         if(resNetFiles[ind].endswith("label0.npy")):
             y[ind] = 0
             numZero = numZero + 1
+            #indsZero.append(ind)
         else:
             y[ind] = 1
             numOne = numOne+1
+            #indsOne.append(ind)
 
     print('Finished getting train/test data')
-    print('Num0: ' + str(numZero) + '; Num1:' + str(numOne))
+    #print('Num0: ' + str(numZero) + '; Num1:' + str(numOne))
+    #numUse = min(numZero,numOne)
+
+    # x2 = np.zeros((numUse*2,numConcatFeats))
+    # y2 = np.zeros(numUse*2)
+    # zerosIndsUse = np.random.choice(indsZero,numUse,replace=False)
+    # oneIndsUse = np.random.choice(indsOne,numUse,replace=False)
+    #
+    # x2[0:numUse,:] = x[zerosIndsUse,:]
+    # y2[0:numUse] = y[zerosIndsUse]
+    # x2[numUse:numUse*2, :] = x[oneIndsUse, :]
+    # y2[numUse:numUse*2] = y[oneIndsUse]
+
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
                                                                    test_size=0.20)
 
@@ -61,6 +77,10 @@ def train_xgboost():
 
 def make_submit():
     clf = train_xgboost()
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
+    fileNm1 = '/home/zdestefa/data/LIDCxgboostRegressor_' + st + '.npy'
+    np.save(fileNm1,clf)
     """
     print('Kaggle Test Data being obtained')
     x2 = np.zeros((len(validationIDs), numConcatFeats))
