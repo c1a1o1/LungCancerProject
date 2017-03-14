@@ -8,16 +8,25 @@ import xgboost as xgb
 import os
 
 numGivenFeat=4096
-numConcatFeats = numGivenFeat*3
+numConcatFeats = 4
 
-dataFolder = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
+trainTestIDs = []
+trainTestLabels = []
+with open('stage1_labels.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        trainTestIDs.append(row['id'])
+        trainTestLabels.append(row['cancer'])
 
-def getFeatureData(fileNm):
-    featData = np.load(os.path.join(dataFolder,fileNm))
+dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds'
+
+def getFeatureData(fileData):
+    featData = np.load(fileData)
     outVec = np.zeros((1,numConcatFeats))
-    outVec[0, 0:numGivenFeat] = np.mean(featData, axis=0)
-    outVec[0, numGivenFeat:numGivenFeat * 2] = np.max(featData, axis=0)  # this causes potential overfit. should remove
-    outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData, axis=0)  # this causes potential overfit. should remove
+    outVec[0, 0] = np.mean(featData)
+    outVec[0, 1] = np.max(featData)  # this causes potential overfit. should remove
+    outVec[0, 2] = np.min(featData)  # this causes potential overfit. should remove
+    outVec[0, 3] = np.std(featData)  # this causes potential overfit. should remove
     return outVec
 
 
@@ -26,27 +35,25 @@ def train_xgboost():
     print('Train/Validation Data being obtained')
     resNetFiles = os.listdir(dataFolder)
     numDataPts = len(resNetFiles)
-    x0 = np.zeros((numDataPts,numConcatFeats))
-    y0 = np.zeros(numDataPts)
+    x = np.zeros((numDataPts,numConcatFeats))
+    y = np.zeros(numDataPts)
 
     numZero = 0
     numOne = 0
-    indsZero = []
-    indsOne = []
-    for ind in range(numDataPts):
-        x0[ind,:] = getFeatureData(resNetFiles[ind])
-        if(resNetFiles[ind].endswith("label0.npy")):
-            y0[ind] = 0
-            numZero = numZero + 1
-            #indsZero.append(ind)
-        else:
-            y0[ind] = 1
-            numOne = numOne+1
-            #indsOne.append(ind)
-
-    indsUse = np.random.choice(range(len(y0)),size=4000)
-    x = x0[indsUse,:]
-    y = y0[indsUse]
+    ind = 0
+    for pInd in range(len(trainTestIDs)):
+        patID = trainTestIDs[pInd]
+        fileName = 'xgBoostPreds_'+patID+'.npy'
+        currentFile = os.path.join(dataFolder, fileName)
+        if(os.path.isfile(currentFile)):
+            x[ind,:] = getFeatureData(currentFile)
+            curL = trainTestLabels[pInd]
+            y[ind] = curL
+            if(curL<1):
+                numZero = numZero + 1
+            else:
+                numOne = numOne+1
+            ind=ind+1
 
     print('Finished getting train/test data')
     print('Num0: ' + str(numZero) + '; Num1:' + str(numOne))
@@ -81,10 +88,7 @@ def train_xgboost():
 
 def make_submit():
     clf = train_xgboost()
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-    fileNm1 = '/home/zdestefa/data/LIDCxgboostRegressor_' + st + '.npy'
-    clf.save_model(fileNm1)
+
     #np.save(fileNm1,clf)
     """
     print('Kaggle Test Data being obtained')
