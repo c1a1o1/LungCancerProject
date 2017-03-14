@@ -10,7 +10,7 @@ print('Loading Binary Array')
 
 matFiles = os.listdir(curDir)
 
-for fInd in range(12,len(matFiles)):
+for fInd in range(len(matFiles)):
     print('Now Processing File ' + str(fInd) + ' of ' + str(len(matFiles)))
 
     curFile = os.path.join(curDir,matFiles[fInd])

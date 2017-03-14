@@ -34,9 +34,9 @@ def train_xgboost():
 
     print('Train/Validation Data being obtained')
     resNetFiles = os.listdir(dataFolder)
-    numDataPts = len(resNetFiles)
-    x = np.zeros((numDataPts,numConcatFeats))
-    y = np.zeros(numDataPts)
+    numPossibleDataPts = len(resNetFiles)
+    x0 = np.zeros((numPossibleDataPts,numConcatFeats))
+    y0 = np.zeros(numPossibleDataPts)
 
     numZero = 0
     numOne = 0
@@ -46,31 +46,24 @@ def train_xgboost():
         fileName = 'xgBoostPreds_'+patID+'.npy'
         currentFile = os.path.join(dataFolder, fileName)
         if(os.path.isfile(currentFile)):
-            x[ind,:] = getFeatureData(currentFile)
-            curL = trainTestLabels[pInd]
-            y[ind] = curL
+            x0[ind,:] = getFeatureData(currentFile)
+            curL = int(trainTestLabels[pInd])
+            y0[ind] = curL
             if(curL<1):
                 numZero = numZero + 1
             else:
                 numOne = numOne+1
             ind=ind+1
 
+    x = x0[0:ind,:]
+    y = y0[0:ind]
     print('Finished getting train/test data')
     print('Num0: ' + str(numZero) + '; Num1:' + str(numOne))
-    #numUse = min(numZero,numOne)
 
-    # x2 = np.zeros((numUse*2,numConcatFeats))
-    # y2 = np.zeros(numUse*2)
-    # zerosIndsUse = np.random.choice(indsZero,numUse,replace=False)
-    # oneIndsUse = np.random.choice(indsOne,numUse,replace=False)
-    #
-    # x2[0:numUse,:] = x[zerosIndsUse,:]
-    # y2[0:numUse] = y[zerosIndsUse]
-    # x2[numUse:numUse*2, :] = x[oneIndsUse, :]
-    # y2[numUse:numUse*2] = y[oneIndsUse]
+    print("Num Data Points" + str(len(y)))
 
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-                                                                   test_size=0.20)
+                                                                   test_size=0.1)
 
     clf = xgb.XGBRegressor(max_depth=10,
                            n_estimators=1500,
