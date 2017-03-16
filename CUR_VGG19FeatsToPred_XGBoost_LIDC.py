@@ -29,38 +29,32 @@ def train_xgboost():
     x0 = np.zeros((numDataPts,numConcatFeats))
     y0 = np.zeros(numDataPts)
 
-    numZero = 0
-    numOne = 0
-    indsZero = []
-    indsOne = []
     for ind in range(numDataPts):
-        x0[ind,:] = getFeatureData(resNetFiles[ind])
         if(resNetFiles[ind].endswith("label0.npy")):
             y0[ind] = 0
-            numZero = numZero + 1
-            #indsZero.append(ind)
         else:
             y0[ind] = 1
-            numOne = numOne+1
-            #indsOne.append(ind)
 
-    indsUse = np.random.choice(range(len(y0)),size=4000)
-    x = x0[indsUse,:]
-    y = y0[indsUse]
+    numZeros = np.sum(y0<1)
+    numOne = len(y0)-numZeros
+    numPtsUse = min(numZeros,numOne)
+
+    x = np.zeros((2*numPtsUse,numConcatFeats))
+    y = np.zeros(2*numPtsUse)
+
+    numOut = np.zeros(2)
+    indsToDrawFrom = np.random.choice(range(len(y0)),size=len(y0))
+    outInd = 0
+    for ind0 in indsToDrawFrom:
+        curOut = int(y0[ind0])
+        if(numOut[curOut] <= numPtsUse):
+            numOut[curOut] = numOut[curOut] + 1
+            y[outInd] = curOut
+            x[outInd,:] = getFeatureData(resNetFiles[ind0])
+            outInd = outInd+1
 
     print('Finished getting train/test data')
-    print('Num0: ' + str(numZero) + '; Num1:' + str(numOne))
-    #numUse = min(numZero,numOne)
-
-    # x2 = np.zeros((numUse*2,numConcatFeats))
-    # y2 = np.zeros(numUse*2)
-    # zerosIndsUse = np.random.choice(indsZero,numUse,replace=False)
-    # oneIndsUse = np.random.choice(indsOne,numUse,replace=False)
-    #
-    # x2[0:numUse,:] = x[zerosIndsUse,:]
-    # y2[0:numUse] = y[zerosIndsUse]
-    # x2[numUse:numUse*2, :] = x[oneIndsUse, :]
-    # y2[numUse:numUse*2] = y[oneIndsUse]
+    print('Num Zero Blocks:' + str(np.sum(y<1)) + ' Num One Block:' + str(np.sum(y>0)))
 
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
                                                                    test_size=0.20)

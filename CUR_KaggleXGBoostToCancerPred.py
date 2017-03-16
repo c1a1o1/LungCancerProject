@@ -20,14 +20,15 @@ with open('stage1_labels.csv') as csvfile:
 
 dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds'
 
-def getFeatureData(fileData):
-    featData = np.load(fileData)
+def getFeatureData(featData):
     outVec = np.zeros((1,numConcatFeats))
     outVec[0, 0] = np.mean(featData)
     outVec[0, 1] = np.max(featData)  # this causes potential overfit. should remove
     outVec[0, 2] = np.min(featData)  # this causes potential overfit. should remove
     outVec[0, 3] = np.std(featData)  # this causes potential overfit. should remove
     return outVec
+
+
 
 
 def train_xgboost():
@@ -46,14 +47,16 @@ def train_xgboost():
         fileName = 'xgBoostPreds_'+patID+'.npy'
         currentFile = os.path.join(dataFolder, fileName)
         if(os.path.isfile(currentFile)):
-            x0[ind,:] = getFeatureData(currentFile)
-            curL = int(trainTestLabels[pInd])
-            y0[ind] = curL
-            if(curL<1):
-                numZero = numZero + 1
-            else:
-                numOne = numOne+1
-            ind=ind+1
+            initFeatData = np.load(currentFile)
+            if(initFeatData.size > 0):
+                x0[ind,:] = getFeatureData(initFeatData)
+                curL = int(trainTestLabels[pInd])
+                y0[ind] = curL
+                if(curL<1):
+                    numZero = numZero + 1
+                else:
+                    numOne = numOne+1
+                ind=ind+1
 
     x = x0[0:ind,:]
     y = y0[0:ind]
@@ -63,7 +66,7 @@ def train_xgboost():
     print("Num Data Points" + str(len(y)))
 
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-                                                                   test_size=0.1)
+                                                                   test_size=0.2)
 
     clf = xgb.XGBRegressor(max_depth=10,
                            n_estimators=1500,
