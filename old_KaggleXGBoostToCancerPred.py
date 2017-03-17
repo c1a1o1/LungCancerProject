@@ -8,7 +8,7 @@ import xgboost as xgb
 import os
 
 numGivenFeat=4096
-numFeats = 50
+numConcatFeats = 4
 
 trainTestIDs = []
 trainTestLabels = []
@@ -21,7 +21,12 @@ with open('stage1_labels.csv') as csvfile:
 dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds2'
 
 def getFeatureData(featData):
-    return np.reshape(featData,(1,numFeats))
+    outVec = np.zeros((1,numConcatFeats))
+    outVec[0, 0] = np.mean(featData)
+    outVec[0, 1] = np.max(featData)  # this causes potential overfit. should remove
+    outVec[0, 2] = np.min(featData)  # this causes potential overfit. should remove
+    outVec[0, 3] = np.std(featData)  # this causes potential overfit. should remove
+    return outVec
 
 
 
@@ -31,7 +36,7 @@ def train_xgboost():
     print('Train/Validation Data being obtained')
     resNetFiles = os.listdir(dataFolder)
     numPossibleDataPts = len(resNetFiles)
-    x0 = np.zeros((numPossibleDataPts, numFeats))
+    x0 = np.zeros((numPossibleDataPts,numConcatFeats))
     y0 = np.zeros(numPossibleDataPts)
 
     numZero = 0
@@ -43,7 +48,7 @@ def train_xgboost():
         currentFile = os.path.join(dataFolder, fileName)
         if(os.path.isfile(currentFile)):
             initFeatData = np.load(currentFile)
-            if(initFeatData.size >= 50): #TEMP WORKAROUND. TODO: FIX THIS
+            if(initFeatData.size > 0):
                 x0[ind,:] = getFeatureData(initFeatData)
                 curL = int(trainTestLabels[pInd])
                 y0[ind] = curL
@@ -53,22 +58,10 @@ def train_xgboost():
                     numOne = numOne+1
                 ind=ind+1
 
-    numberUse = min(numOne,numZero)
-    x = np.zeros((2*numberUse, numFeats))
-    y = np.zeros(2*numberUse)
-    numCat = np.zeros(2)
-    indsUse2 = np.random.choice(range(len(y0)),len(y0)) #randomized order
-    cInd = 0
-    for pInd in indsUse2:
-        curLabel = int(y0[pInd])
-        if(numCat[curLabel]<numberUse):
-            numCat[curLabel] = numCat[curLabel]+1
-            x[cInd,:] = x0[pInd,:]
-            y[cInd] = curLabel
-            cInd = cInd+1
-
+    x = x0[0:ind,:]
+    y = y0[0:ind]
     print('Finished getting train/test data')
-    print('Num0: ' + str(np.sum(y<1)) + '; Num1:' + str(np.sum(y>0)))
+    print('Num0: ' + str(numZero) + '; Num1:' + str(numOne))
 
     print("Num Data Points" + str(len(y)))
 
