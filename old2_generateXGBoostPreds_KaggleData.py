@@ -11,7 +11,6 @@ from matplotlib import pyplot as plt
 import os
 import csv
 import cv2
-import datetime
 # import mxnet as mx
 # import pandas as pd
 # from sklearn import cross_validation
@@ -118,7 +117,6 @@ for ind in range(numDataPts):
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
 numPtsUse = min(numZeros,numOne)
-#numPtsUse = 300
 
 x = np.zeros((2*numPtsUse,numConcatFeats))
 y = np.zeros(2*numPtsUse)
@@ -128,10 +126,10 @@ indsToDrawFrom = np.random.choice(range(len(y0)),size=len(y0))
 outInd = 0
 for ind0 in indsToDrawFrom:
     curOut = int(y0[ind0])
-    if(numOut[curOut] < numPtsUse):
+    if(numOut[curOut] <= numPtsUse):
         numOut[curOut] = numOut[curOut] + 1
         y[outInd] = curOut
-        x[outInd,:] = getFeatureData(resNetFiles[ind0],dataFolder)
+        x[outInd,:] = getFeatureData(resNetFiles[ind0])
         outInd = outInd+1
 
 print('Finished getting train/test data')
@@ -169,58 +167,46 @@ for fInd in range(len(matFiles)):
 
     blockDim = 64
     blockDimHalf = 32
-    numInXrange = rawHUdata.shape[0]-(blockDim+2)
-    numInYrange = rawHUdata.shape[1]-(blockDim+2)
-    numInZrange = rawHUdata.shape[2]-(blockDim+2)
+    maxX = rawHUdata.shape[0]-(blockDim+2)
+    maxY = rawHUdata.shape[1]-(blockDim+2)
+    maxZ = rawHUdata.shape[2]-(blockDim+2)
+    rangeX = range(34,maxX,32)
+    rangeY = range(34,maxY,32)
+    rangeZ = range(34, maxZ, 32)
+    numGridPts = len(rangeX)*len(rangeY)*len(rangeZ)
+    xyzRange = np.meshgrid(rangeX,rangeY,rangeZ)
 
-    numSampledPts = 4500
-    numUseMax = 50
-    blockDim = 64
-    blockDimHalf = 32
-    matrixToMultBy = np.matlib.repmat([numInXrange, numInYrange, numInZrange], numSampledPts, 1)
-
-    print('Matrix Conversion done. Doing Sampling...')
-
-    initSamples = np.random.rand(numSampledPts, 3)
-    multipliedSamples = np.multiply(matrixToMultBy, initSamples)
-    finalSamples = np.floor(np.add(multipliedSamples, blockDimHalf + 2))
+    xValues = np.reshape(xyzRange[0],numGridPts)
+    yValues = np.reshape(xyzRange[1],numGridPts)
+    zValues = np.reshape(xyzRange[2],numGridPts)
 
     print('Matrix Conversion done. Doing Sliding Window...')
-    prismValid = np.ones(rawHUdata.shape)
+
     huBlocks = []
-    currentNumberUsed = 0
-    numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.50)
-    for ii in range(finalSamples.shape[0]):
-        curPt = finalSamples[ii, :]
-        curPtR = int(curPt[0])
-        curPtC = int(curPt[1])
-        curPtS = int(curPt[2])
+    numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.35)
+    for ii in range(len(xValues)):
+        curPtR = xValues[ii]
+        curPtC = yValues[ii]
+        curPtS = zValues[ii]
 
-        if (prismValid[curPtR, curPtC, curPtS] > 0):
+        xMin = curPtR-blockDimHalf
+        xMax = xMin + blockDim
+        yMin = curPtC-blockDimHalf
+        yMax = yMin + blockDim
+        zMin = curPtS-blockDimHalf
+        zMax = zMin + blockDim
+        currentHUdataBlock = rawHUdata[xMin:xMax,yMin:yMax,zMin:zMax]
+        numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
+        if(numPossibleLung>numPossibleLungThreshold ):
+            print("Num Lung: " + str(numPossibleLung))
+            huBlocks.append(currentHUdataBlock)
 
-            xMin = curPtR-blockDimHalf
-            xMax = xMin + blockDim
-            yMin = curPtC-blockDimHalf
-            yMax = yMin + blockDim
-            zMin = curPtS-blockDimHalf
-            zMax = zMin + blockDim
-            currentHUdataBlock = rawHUdata[xMin:xMax,yMin:yMax,zMin:zMax]
-            numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
-            if(numPossibleLung>numPossibleLungThreshold ):
-                print("Num Lung: " + str(numPossibleLung))
-                prismValid[xMin:xMax, yMin:yMax, zMin:zMax] = 0
-                huBlocks.append(currentHUdataBlock)
-                currentNumberUsed = currentNumberUsed + 1
-                if(currentNumberUsed >= numUseMax):
-                    break
-
-    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds2'
+    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
     blockPreds = []
     displayInd = 1
-    startTime = datetime.datetime.now()
     for block in huBlocks:
         print("Processing block " + str(displayInd) + " of " + str(len(huBlocks)))
         displayInd = displayInd+1
@@ -231,8 +217,6 @@ for fInd in range(len(matFiles)):
         outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(feats,axis=0)  # this causes potential overfit. should remove
         blockPreds.append(clf.predict(outVec))
 
-    ptFinishTime = datetime.datetime.now()
-    print("Time To Process Pt Blocks: " + str(ptFinishTime-startTime))
     print("Now outputting XGBoost Prediction Array")
     saveFile = os.path.join(saveFolder, 'xgBoostPreds_' + patID + '.npy')
     np.save(saveFile, blockPreds)
