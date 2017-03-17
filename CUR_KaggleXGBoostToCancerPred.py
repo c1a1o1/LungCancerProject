@@ -11,6 +11,7 @@ numGivenFeat=4096
 numFeats = 50
 
 trainTestIDs = []
+validationIDs = []
 trainTestLabels = []
 with open('stage1_labels.csv') as csvfile:
     reader = csv.DictReader(csvfile)
@@ -18,10 +19,17 @@ with open('stage1_labels.csv') as csvfile:
         trainTestIDs.append(row['id'])
         trainTestLabels.append(row['cancer'])
 
+with open('stage1_sample_submission.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        validationIDs.append(row['id'])
+
 dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds2'
 
 def getFeatureData(featData):
-    return np.reshape(featData,(1,numFeats))
+    outputData = np.zeros((1,numFeats))
+    outputData[0, range(featData.size)] = np.reshape(featData, (1, featData.size))
+    return outputData
 
 
 
@@ -92,21 +100,26 @@ def train_xgboost():
 def make_submit():
     clf = train_xgboost()
 
-    #np.save(fileNm1,clf)
-    """
+
+
     print('Kaggle Test Data being obtained')
-    x2 = np.zeros((len(validationIDs), numConcatFeats))
+    x2 = np.zeros((len(validationIDs), numFeats))
     ind = 0
     for id in validationIDs:
-        x2[ind, :] = getFeatureData(id)
+        fileName = 'xgBoostPreds_' + id + '.npy'
+        currentFile = os.path.join(dataFolder, fileName)
+        if (os.path.isfile(currentFile)):
+            initFeatData = np.load(currentFile)
+        x2[ind, :] = getFeatureData(initFeatData)
         ind = ind + 1
+
     print('Finished getting kaggle test data')
 
     pred = clf.predict(x2)
 
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-    fileName = 'submissions/VGG19PlusXGBoost_' + st + '.csv'
+    fileName = 'submissions/BlockDataSubmission_' + st + '.csv'
 
     with open(fileName, 'w') as csvfile:
         fieldnames = ['id', 'cancer']
@@ -115,7 +128,7 @@ def make_submit():
         writer.writeheader()
         for ind in range(len(validationIDs)):
             writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
-    """
+
 
 
 if __name__ == '__main__':
