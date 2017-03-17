@@ -24,6 +24,7 @@ from keras.layers import Convolution3D, MaxPooling3D
 from keras.utils import np_utils
 from keras import backend as K
 import numpy as np
+from scipy.ndimage.interpolation import zoom
 import csv
 import time
 import datetime
@@ -45,6 +46,7 @@ dataFolder2 = '/home/zdestefa/data/blockFilesResizedVGG19to4096Kaggle'
 
 
 curDir = '/home/zdestefa/data/rawHUdata'
+curDir2 = '/home/zdestefa/data/volResizeInfo'
 
 print('Loading Binary Array')
 
@@ -66,6 +68,7 @@ def getFeatureData(fileNm,dataFold):
     return outVec
 
 matFiles = os.listdir(curDir)
+matFiles2 = os.listdir(curDir2)
 
 origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 
@@ -158,6 +161,7 @@ for fInd in range(len(matFiles)):
     curFile = os.path.join(curDir,matFiles[fInd])
     patID = matFiles[fInd][7:len(matFiles[fInd])-4]
 
+    curFile2 = os.path.join(curDir2, matFiles2[fInd])
     #huDataFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/HUarray_'
     #resizeTupleFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/resizeTuple_'
 
@@ -165,16 +169,18 @@ for fInd in range(len(matFiles)):
     #resizeFileNm = resizeTupleFilePrefix+patID+'.npy'
 
     matData = sio.loadmat(curFile)
+    matData2 = sio.loadmat(curFile2)
     rawHUdata = matData['dcmArrayHU']
+    resizeData = np.reshape(matData2['resizeTuple'],3)
 
     blockDim = 64
     blockDimHalf = 32
-    numInXrange = rawHUdata.shape[0]-(blockDim+2)
-    numInYrange = rawHUdata.shape[1]-(blockDim+2)
-    numInZrange = rawHUdata.shape[2]-(blockDim+2)
+    numInXrange = rawHUdata.shape[0]*resizeData[0]-(blockDim+2)
+    numInYrange = rawHUdata.shape[1]*resizeData[1]-(blockDim+2)
+    numInZrange = rawHUdata.shape[2]*resizeData[2]-(blockDim+2)
 
     numSampledPts = 4500
-    numUseMax = 50
+    numUseMax = 75
     blockDim = 64
     blockDimHalf = 32
     matrixToMultBy = np.matlib.repmat([numInXrange, numInYrange, numInZrange], numSampledPts, 1)
@@ -186,7 +192,8 @@ for fInd in range(len(matFiles)):
     finalSamples = np.floor(np.add(multipliedSamples, blockDimHalf + 2))
 
     print('Matrix Conversion done. Doing Sliding Window...')
-    prismValid = np.ones(rawHUdata.shape)
+    huResize = zoom(rawHUdata,resizeData)
+    prismValid = np.ones(huResize.shape)
     huBlocks = []
     currentNumberUsed = 0
     numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.50)
@@ -204,7 +211,7 @@ for fInd in range(len(matFiles)):
             yMax = yMin + blockDim
             zMin = curPtS-blockDimHalf
             zMax = zMin + blockDim
-            currentHUdataBlock = rawHUdata[xMin:xMax,yMin:yMax,zMin:zMax]
+            currentHUdataBlock = huResize[xMin:xMax,yMin:yMax,zMin:zMax]
             numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
             if(numPossibleLung>numPossibleLungThreshold ):
                 print("Num Lung: " + str(numPossibleLung))
@@ -214,7 +221,7 @@ for fInd in range(len(matFiles)):
                 if(currentNumberUsed >= numUseMax):
                     break
 
-    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds2'
+    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds3'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
