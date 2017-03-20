@@ -24,7 +24,7 @@ with open('stage1_sample_submission.csv') as csvfile:
     for row in reader:
         validationIDs.append(row['id'])
 
-dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds2'
+dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds3'
 
 def getFeatureData(featData):
     featData2 = np.reshape(featData,featData.size)
@@ -56,25 +56,26 @@ def train_xgboost():
         currentFile = os.path.join(dataFolder, fileName)
         if(os.path.isfile(currentFile)):
             initFeatData = np.load(currentFile)
-            if(initFeatData.size >= 50): #TEMP WORKAROUND. TODO: FIX THIS
-                x0[ind,:] = getFeatureData(initFeatData)
-                curL = int(trainTestLabels[pInd])
-                y0[ind] = curL
-                if(curL<1):
-                    numZero = numZero + 1
-                else:
-                    numOne = numOne+1
-                ind=ind+1
+            x0[ind,:] = getFeatureData(initFeatData)
+            curL = int(trainTestLabels[pInd])
+            y0[ind] = curL
+            if(curL<1):
+                numZero = numZero + 1
+            else:
+                numOne = numOne+1
+            ind=ind+1
 
     numberUse = min(numOne,numZero)
-    x = np.zeros((2*numberUse, numFeats))
-    y = np.zeros(2*numberUse)
+    #There are 1035 0's and 362 1's
+    numUseMax = [2*numberUse,numberUse]
+    x = np.zeros((3*numberUse, numFeats))
+    y = np.zeros(3*numberUse)
     numCat = np.zeros(2)
     indsUse2 = np.random.choice(range(len(y0)),len(y0)) #randomized order
     cInd = 0
     for pInd in indsUse2:
         curLabel = int(y0[pInd])
-        if(numCat[curLabel]<numberUse):
+        if(numCat[curLabel]<numUseMax[curLabel]):
             numCat[curLabel] = numCat[curLabel]+1
             x[cInd,:] = x0[pInd,:]
             y[cInd] = curLabel
