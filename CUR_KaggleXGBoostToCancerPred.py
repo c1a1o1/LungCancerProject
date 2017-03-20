@@ -8,7 +8,7 @@ import xgboost as xgb
 import os
 
 numGivenFeat=4096
-numFeats = 50
+numFeats = 150
 
 trainTestIDs = []
 validationIDs = []
@@ -27,9 +27,14 @@ with open('stage1_sample_submission.csv') as csvfile:
 dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds2'
 
 def getFeatureData(featData):
-    outputData = np.zeros((1,numFeats))
-    outputData[0, range(featData.size)] = np.reshape(featData, (1, featData.size))
-    return outputData
+    featData2 = np.reshape(featData,featData.size)
+    if(featData.size<numFeats):
+        outputData= np.random.choice(featData2,size=(1,numFeats),replace=True)
+    else:
+        outputData =  np.random.choice(featData2,size=(1,numFeats),replace=False)
+    finalOutput = np.sort(outputData)
+    return finalOutput[::-1]
+
 
 
 

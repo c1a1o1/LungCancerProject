@@ -68,7 +68,6 @@ def getFeatureData(fileNm,dataFold):
     return outVec
 
 matFiles = os.listdir(curDir)
-matFiles2 = os.listdir(curDir2)
 
 origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 
@@ -161,7 +160,7 @@ for fInd in range(len(matFiles)):
     curFile = os.path.join(curDir,matFiles[fInd])
     patID = matFiles[fInd][7:len(matFiles[fInd])-4]
 
-    curFile2 = os.path.join(curDir2, matFiles2[fInd])
+    curFile2 = os.path.join(curDir2, 'resizeTuple_' + patID + '.mat')
     #huDataFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/HUarray_'
     #resizeTupleFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/resizeTuple_'
 
@@ -172,6 +171,9 @@ for fInd in range(len(matFiles)):
     matData2 = sio.loadmat(curFile2)
     rawHUdata = matData['dcmArrayHU']
     resizeData = np.reshape(matData2['resizeTuple'],3)
+    for ii in range(3):
+        if(resizeData[ii]<0.1):
+            resizeData[ii]=1
 
     blockDim = 64
     blockDimHalf = 32
@@ -180,7 +182,7 @@ for fInd in range(len(matFiles)):
     numInZrange = rawHUdata.shape[2]*resizeData[2]-(blockDim+2)
 
     numSampledPts = 4500
-    numUseMax = 75
+    numUseMax = 150
     blockDim = 64
     blockDimHalf = 32
     matrixToMultBy = np.matlib.repmat([numInXrange, numInYrange, numInZrange], numSampledPts, 1)
