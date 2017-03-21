@@ -66,10 +66,17 @@ def train_xgboost():
             ind=ind+1
 
     numberUse = min(numOne,numZero)
+
     #There are 1035 0's and 362 1's
     numUseMax = [2*numberUse,numberUse]
     x = np.zeros((3*numberUse, numFeats))
     y = np.zeros(3*numberUse)
+
+    #THIS SETUP PROVED TO BE THE WORST
+    #numUseMax = [numZero,numOne] #use all the data
+    #x = np.zeros((len(trainTestIDs),numFeats))
+    #y = np.zeros(len(trainTestIDs))
+
     numCat = np.zeros(2)
     indsUse2 = np.random.choice(range(len(y0)),len(y0)) #randomized order
     cInd = 0
@@ -133,7 +140,10 @@ def make_submit():
 
         writer.writeheader()
         for ind in range(len(validationIDs)):
-            writer.writerow({'id': validationIDs[ind], 'cancer': str(pred[ind])})
+            curPred = pred[ind]
+            if(curPred<0):
+                curPred=0
+            writer.writerow({'id': validationIDs[ind], 'cancer': str(curPred)})
 
 
 
