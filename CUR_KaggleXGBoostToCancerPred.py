@@ -8,7 +8,7 @@ import xgboost as xgb
 import os
 
 numGivenFeat=4096
-numFeats = 150
+numFeats = 75
 
 trainTestIDs = []
 validationIDs = []
@@ -24,7 +24,7 @@ with open('stage1_sample_submission.csv') as csvfile:
     for row in reader:
         validationIDs.append(row['id'])
 
-dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds3'
+dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds4'
 
 def getFeatureData(featData):
     featData2 = np.reshape(featData,featData.size)

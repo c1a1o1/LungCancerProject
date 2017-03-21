@@ -122,15 +122,19 @@ numOne = len(y0)-numZeros
 numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
 
-x = np.zeros((2*numPtsUse,numConcatFeats))
-y = np.zeros(2*numPtsUse)
+numUseMax = [2*numPtsUse,numPtsUse]
+x = np.zeros((3*numPtsUse, numConcatFeats))
+y = np.zeros(3*numPtsUse)
+
+#x = np.zeros((2*numPtsUse,numConcatFeats))
+#y = np.zeros(2*numPtsUse)
 
 numOut = np.zeros(2)
 indsToDrawFrom = np.random.choice(range(len(y0)),size=len(y0))
 outInd = 0
 for ind0 in indsToDrawFrom:
     curOut = int(y0[ind0])
-    if(numOut[curOut] < numPtsUse):
+    if(numOut[curOut] < numUseMax[curOut]):
         numOut[curOut] = numOut[curOut] + 1
         y[outInd] = curOut
         x[outInd,:] = getFeatureData(resNetFiles[ind0],dataFolder)
@@ -182,7 +186,7 @@ for fInd in range(len(matFiles)):
     numInZrange = rawHUdata.shape[2]*resizeData[2]-(blockDim+2)
 
     numSampledPts = 4500
-    numUseMax = 150
+    numUseMax = 75
     blockDim = 64
     blockDimHalf = 32
     matrixToMultBy = np.matlib.repmat([numInXrange, numInYrange, numInZrange], numSampledPts, 1)
@@ -223,7 +227,7 @@ for fInd in range(len(matFiles)):
                 if(currentNumberUsed >= numUseMax):
                     break
 
-    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds3'
+    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds4'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
