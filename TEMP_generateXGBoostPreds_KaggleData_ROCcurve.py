@@ -116,35 +116,36 @@ for ind in range(numDataPts):
         y0[ind] = 0
     else:
         y0[ind] = 1
+    x0[ind, :] = getFeatureData(resNetFiles[ind], dataFolder)
 
-numZeros = np.sum(y0<1)
-numOne = len(y0)-numZeros
+trn_x0, val_x, trn_y0, val_y = cross_validation.train_test_split(x0, y0, random_state=42, stratify=y0,
+                                                               test_size=0.20)
+
+numZeros = np.sum(trn_y0<1)
+numOne = len(trn_y0)-numZeros
 numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
 
-numUseMax = [2*numPtsUse,numPtsUse]
-x = np.zeros((3*numPtsUse, numConcatFeats))
-y = np.zeros(3*numPtsUse)
-
-#x = np.zeros((2*numPtsUse,numConcatFeats))
-#y = np.zeros(2*numPtsUse)
+numUseMax = [numPtsUse,numPtsUse]
+x = np.zeros((2*numPtsUse, numConcatFeats))
+y = np.zeros(2*numPtsUse)
 
 numOut = np.zeros(2)
-indsToDrawFrom = np.random.choice(range(len(y0)),size=len(y0))
+indsToDrawFrom = np.random.choice(range(len(trn_y0)),size=len(trn_y0))
 outInd = 0
 for ind0 in indsToDrawFrom:
-    curOut = int(y0[ind0])
+    curOut = int(trn_y0[ind0])
     if(numOut[curOut] < numUseMax[curOut]):
         numOut[curOut] = numOut[curOut] + 1
         y[outInd] = curOut
-        x[outInd,:] = getFeatureData(resNetFiles[ind0],dataFolder)
+        x[outInd,:] = trn_x0[ind0,:]
         outInd = outInd+1
 
 print('Finished getting train/test data')
 print('Num Zero Blocks:' + str(np.sum(y<1)) + ' Num One Block:' + str(np.sum(y>0)))
 
-trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-                                                               test_size=0.20)
+#trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
+#                                                               test_size=0.20)
 
 clf = xgb.XGBRegressor(max_depth=10,
                        n_estimators=500,
@@ -155,11 +156,11 @@ clf = xgb.XGBRegressor(max_depth=10,
                        colsample_bytree=0.80,
                        seed=4242)
 
-clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True,
+clf.fit(x, y, eval_set=[(val_x, val_y)], verbose=True,
         eval_metric='logloss', early_stopping_rounds=100)
 
 
 yhat = clf.predict(x)
 yhatVal = clf.predict(val_x)
 
-sio.savemat('/home/zdestefa/data/NoduleDataROCPrep2.mat',{"yhat":yhat,"y":y,"yhatVal":yhatVal,"val_y":val_y})
+sio.savemat('/home/zdestefa/data/NoduleDataROCPrepEvenSplit.mat',{"yhat":yhat,"y":y,"yhatVal":yhatVal,"val_y":val_y})
