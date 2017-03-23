@@ -125,10 +125,12 @@ numZeros = np.sum(trn_y0<1)
 numOne = len(trn_y0)-numZeros
 numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
+numPtsUseOther = int(np.floor(numPtsUse*0.5))
+numPtsTotal = numPtsUse+numPtsUseOther
 
-numUseMax = [numPtsUse,numPtsUse]
-x = np.zeros((2*numPtsUse, numConcatFeats))
-y = np.zeros(2*numPtsUse)
+numUseMax = [numPtsUseOther,numPtsUse]
+x = np.zeros((numPtsTotal, numConcatFeats))
+y = np.zeros(numPtsTotal)
 
 numOut = np.zeros(2)
 indsToDrawFrom = np.random.choice(range(len(trn_y0)),size=len(trn_y0))
@@ -163,4 +165,4 @@ clf.fit(x, y, eval_set=[(val_x, val_y)], verbose=True,
 yhat = clf.predict(x)
 yhatVal = clf.predict(val_x)
 
-sio.savemat('/home/zdestefa/data/NoduleDataROCPrepEvenSplit.mat',{"yhat":yhat,"y":y,"yhatVal":yhatVal,"val_y":val_y})
+sio.savemat('/home/zdestefa/data/NoduleDataROCPrepUnbalancedOtherSplit.mat',{"yhat":yhat,"y":y,"yhatVal":yhatVal,"val_y":val_y})

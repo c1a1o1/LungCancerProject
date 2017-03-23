@@ -24,7 +24,7 @@ with open('stage1_sample_submission.csv') as csvfile:
     for row in reader:
         validationIDs.append(row['id'])
 
-dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds4'
+dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds3'
 
 def getFeatureData(featData):
     featData2 = np.reshape(featData,featData.size)
@@ -66,11 +66,13 @@ def train_xgboost():
             ind=ind+1
 
     numberUse = min(numOne,numZero)
+    numPtsOther = int(np.floor(numberUse*2))
+    numPtsTotal = numberUse+numPtsOther
 
     #There are 1035 0's and 362 1's
-    numUseMax = [2*numberUse,numberUse]
-    x = np.zeros((3*numberUse, numFeats))
-    y = np.zeros(3*numberUse)
+    numUseMax = [numPtsOther,numberUse]
+    x = np.zeros((numPtsTotal, numFeats))
+    y = np.zeros(numPtsTotal)
 
     #THIS SETUP PROVED TO BE THE WORST
     #numUseMax = [numZero,numOne] #use all the data

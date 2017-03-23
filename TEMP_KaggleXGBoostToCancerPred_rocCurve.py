@@ -69,11 +69,19 @@ def train_xgboost():
     numOne = len(trn_y0) - numZeros
     numPtsUse = min(numZeros, numOne)
     # numPtsUse = 300
+    numPtsUseOther = int(np.floor(numPtsUse*0.33))
 
-    numUseMax = [numPtsUse, numPtsUse]
-    x = np.zeros((2 * numPtsUse, numFeats))
-    y = np.zeros(2 * numPtsUse)
+    #numUseMax = [numPtsUse, numPtsUse]
+    #x = np.zeros((3 * numPtsUse, numFeats))
+    #y = np.zeros(3 * numPtsUse)
 
+    numUseMax = [numPtsUseOther, numPtsUse]
+    x = np.zeros((numPtsUseOther+ numPtsUse, numFeats))
+    y = np.zeros(numPtsUseOther+numPtsUse)
+
+    #numUseMax = [numZero, numOne]
+    #x = np.zeros((len(trn_y0), numFeats))
+    #y = np.zeros(len(trn_y0))
 
     #THIS SETUP PROVED TO BE THE WORST
     #numUseMax = [numZero,numOne] #use all the data
@@ -114,7 +122,7 @@ def train_xgboost():
     yhat = clf.predict(x)
     yhatVal = clf.predict(val_x)
 
-    sio.savemat('/home/zdestefa/data/PatientDataROCcurveBalancedSplit.mat',
+    sio.savemat('/home/zdestefa/data/PatientDataROCcurveUnbalancedOtherSplit2.mat',
                 {"yhat": yhat, "y": y, "yhatVal": yhatVal, "val_y": val_y})
 
     return clf
