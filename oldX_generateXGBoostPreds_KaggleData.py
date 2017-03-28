@@ -187,60 +187,62 @@ for fInd in range(len(matFiles)):
 
     numSampledPts = 4500
     numUseMax = 75
+    blockDim = 64
+    blockDimHalf = 32
+    matrixToMultBy = np.matlib.repmat([numInXrange, numInYrange, numInZrange], numSampledPts, 1)
 
-    maxX = rawHUdata.shape[0] - (blockDim + 2)
-    maxY = rawHUdata.shape[1] - (blockDim + 2)
-    maxZ = rawHUdata.shape[2] - (blockDim + 2)
-    rangeX = range(34, maxX, 32)
-    rangeY = range(34, maxY, 32)
-    rangeZ = range(34, maxZ, 32)
+    print('Matrix Conversion done. Doing Sampling...')
 
-    numGridPts = len(rangeX) * len(rangeY) * len(rangeZ)
-    xyzRange = np.meshgrid(rangeX, rangeY, rangeZ)
-
-    xValues = np.reshape(xyzRange[0], numGridPts)
-    yValues = np.reshape(xyzRange[1], numGridPts)
-    zValues = np.reshape(xyzRange[2], numGridPts)
+    initSamples = np.random.rand(numSampledPts, 3)
+    multipliedSamples = np.multiply(matrixToMultBy, initSamples)
+    finalSamples = np.floor(np.add(multipliedSamples, blockDimHalf + 2))
 
     print('Matrix Conversion done. Doing Sliding Window...')
-
+    huResize = zoom(rawHUdata,resizeData)
+    prismValid = np.ones(huResize.shape)
     huBlocks = []
-    numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.35)
-    for ii in range(len(xValues)):
-        curPtR = xValues[ii]
-        curPtC = yValues[ii]
-        curPtS = zValues[ii]
+    currentNumberUsed = 0
+    numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.50)
+    for ii in range(finalSamples.shape[0]):
+        curPt = finalSamples[ii, :]
+        curPtR = int(curPt[0])
+        curPtC = int(curPt[1])
+        curPtS = int(curPt[2])
 
-        xMin = curPtR - blockDimHalf
-        xMax = xMin + blockDim
-        yMin = curPtC - blockDimHalf
-        yMax = yMin + blockDim
-        zMin = curPtS - blockDimHalf
-        zMax = zMin + blockDim
-        currentHUdataBlock = rawHUdata[xMin:xMax, yMin:yMax, zMin:zMax]
-        numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
-        if (numPossibleLung > numPossibleLungThreshold):
-            print("Num Lung: " + str(numPossibleLung))
-            huBlocks.append(currentHUdataBlock)
+        if (prismValid[curPtR, curPtC, curPtS] > 0):
 
+            xMin = curPtR-blockDimHalf
+            xMax = xMin + blockDim
+            yMin = curPtC-blockDimHalf
+            yMax = yMin + blockDim
+            zMin = curPtS-blockDimHalf
+            zMax = zMin + blockDim
+            currentHUdataBlock = huResize[xMin:xMax,yMin:yMax,zMin:zMax]
+            numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
+            if(numPossibleLung>numPossibleLungThreshold ):
+                print("Num Lung: " + str(numPossibleLung))
+                prismValid[xMin:xMax, yMin:yMax, zMin:zMax] = 0
+                huBlocks.append(currentHUdataBlock)
+                currentNumberUsed = currentNumberUsed + 1
+                if(currentNumberUsed >= numUseMax):
+                    break
 
     saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds4'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
     blockPreds = []
-    currentInd = 0
-    numBlocks = len(huBlocks)
-    outputMatrix = np.zeros((numBlocks, numConcatFeats))
+    displayInd = 1
     startTime = datetime.datetime.now()
     for block in huBlocks:
-        print("Processing block " + str(currentInd+1) + " of " + str(len(huBlocks)))
+        print("Processing block " + str(displayInd) + " of " + str(len(huBlocks)))
+        displayInd = displayInd+1
         feats = getResNetData(block)
-        outputMatrix[currentInd, 0:numGivenFeat] = np.mean(feats, axis=0)
-        outputMatrix[currentInd, numGivenFeat:numGivenFeat * 2] = np.max(feats, axis=0)  # this causes potential overfit. should remove
-        outputMatrix[currentInd, numGivenFeat * 2:numGivenFeat * 3] = np.min(feats, axis=0)  # this causes potential overfit. should remove
-        blockPreds.append(clf.predict(outputMatrix))
-        currentInd = currentInd + 1
+        outVec = np.zeros((1, numConcatFeats))
+        outVec[0, 0:numGivenFeat] = np.mean(feats, axis=0)
+        outVec[0, numGivenFeat:numGivenFeat * 2] = np.max(feats,axis=0)  # this causes potential overfit. should remove
+        outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(feats,axis=0)  # this causes potential overfit. should remove
+        blockPreds.append(clf.predict(outVec))
 
     ptFinishTime = datetime.datetime.now()
     print("Time To Process Pt Blocks: " + str(ptFinishTime-startTime))
