@@ -128,7 +128,7 @@ y = np.zeros(3*numPtsUse)
 
 #x = np.zeros((2*numPtsUse,numConcatFeats))
 #y = np.zeros(2*numPtsUse)
-
+"""
 numOut = np.zeros(2)
 indsToDrawFrom = np.random.choice(range(len(y0)),size=len(y0))
 outInd = 0
@@ -157,7 +157,7 @@ clf = xgb.XGBRegressor(max_depth=10,
 
 clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True,
         eval_metric='logloss', early_stopping_rounds=100)
-
+"""
 for fInd in range(len(matFiles)):
     print('Now Processing File ' + str(fInd) + ' of ' + str(len(matFiles)))
 
@@ -224,7 +224,7 @@ for fInd in range(len(matFiles)):
             huBlocks.append(currentHUdataBlock)
 
 
-    saveFolder = '/home/zdestefa/data/KaggleXGBoostPreds4'
+    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
@@ -239,14 +239,14 @@ for fInd in range(len(matFiles)):
         outputMatrix[currentInd, 0:numGivenFeat] = np.mean(feats, axis=0)
         outputMatrix[currentInd, numGivenFeat:numGivenFeat * 2] = np.max(feats, axis=0)  # this causes potential overfit. should remove
         outputMatrix[currentInd, numGivenFeat * 2:numGivenFeat * 3] = np.min(feats, axis=0)  # this causes potential overfit. should remove
-        blockPreds.append(clf.predict(outputMatrix))
+        #blockPreds.append(clf.predict(outputMatrix))
         currentInd = currentInd + 1
 
     ptFinishTime = datetime.datetime.now()
     print("Time To Process Pt Blocks: " + str(ptFinishTime-startTime))
     print("Now outputting XGBoost Prediction Array")
-    saveFile = os.path.join(saveFolder, 'xgBoostPreds_' + patID + '.npy')
-    np.save(saveFile, blockPreds)
+    saveFile = os.path.join(saveFolder, 'blockInfoOutputMatrix_' + patID + '.npy')
+    np.save(saveFile, outputMatrix)
 
     # huBlocksOutput = np.zeros((len(huBlocks),64,64,64))
     # curI = 0
