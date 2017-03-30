@@ -181,19 +181,13 @@ for fInd in range(len(matFiles)):
 
     blockDim = 64
     blockDimHalf = 32
-    numInXrange = rawHUdata.shape[0]*resizeData[0]-(blockDim+2)
-    numInYrange = rawHUdata.shape[1]*resizeData[1]-(blockDim+2)
-    numInZrange = rawHUdata.shape[2]*resizeData[2]-(blockDim+2)
+    numInXrange = int(np.floor(rawHUdata.shape[0]*resizeData[0]-(blockDimHalf+2)))
+    numInYrange = int(np.floor(rawHUdata.shape[1]*resizeData[1]-(blockDimHalf+2)))
+    numInZrange = int(np.floor(rawHUdata.shape[2]*resizeData[2]-(blockDimHalf+2)))
 
-    numSampledPts = 4500
-    numUseMax = 75
-
-    maxX = rawHUdata.shape[0] - (blockDim + 2)
-    maxY = rawHUdata.shape[1] - (blockDim + 2)
-    maxZ = rawHUdata.shape[2] - (blockDim + 2)
-    rangeX = range(34, maxX, 32)
-    rangeY = range(34, maxY, 32)
-    rangeZ = range(34, maxZ, 32)
+    rangeX = range(34, numInXrange, 32)
+    rangeY = range(34, numInYrange, 32)
+    rangeZ = range(34, numInZrange, 32)
 
     numGridPts = len(rangeX) * len(rangeY) * len(rangeZ)
     xyzRange = np.meshgrid(rangeX, rangeY, rangeZ)
@@ -204,8 +198,11 @@ for fInd in range(len(matFiles)):
 
     print('Matrix Conversion done. Doing Sliding Window...')
 
+    #Order=0 idea comes from this blog post
+    #http://stackoverflow.com/questions/13242382/resampling-a-numpy-array-representing-an-image
     huBlocks = []
     numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.35)
+    resizedHUdata = zoom(rawHUdata,resizeData,mode='nearest',order=0)
     for ii in range(len(xValues)):
         curPtR = xValues[ii]
         curPtC = yValues[ii]
@@ -217,14 +214,14 @@ for fInd in range(len(matFiles)):
         yMax = yMin + blockDim
         zMin = curPtS - blockDimHalf
         zMax = zMin + blockDim
-        currentHUdataBlock = rawHUdata[xMin:xMax, yMin:yMax, zMin:zMax]
+        currentHUdataBlock = resizedHUdata[xMin:xMax, yMin:yMax, zMin:zMax]
         numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
         if (numPossibleLung > numPossibleLungThreshold):
             print("Num Lung: " + str(numPossibleLung))
             huBlocks.append(currentHUdataBlock)
 
 
-    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo'
+    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo2'
 
     print("Now putting each lung block through ResNet and XGBoost")
 

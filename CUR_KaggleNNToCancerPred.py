@@ -132,9 +132,10 @@ def train_xgboost():
     #Xnew = transformer.fit_transform(x)
     #print("post-projection shape: " + str(Xnew.shape))
     Xnew = x
+    Yenc = np_utils.to_categorical(y, 2)
 
-    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(Xnew, y, random_state=42,
-                                                                   stratify=y,
+    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(Xnew, Yenc, random_state=42,
+                                                                   stratify=Yenc,
                                                                    test_size=0.2)
 
     input_img2 = Input(shape=(numGivenFeat*6,))
