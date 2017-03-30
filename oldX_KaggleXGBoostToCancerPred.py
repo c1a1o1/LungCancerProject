@@ -6,9 +6,9 @@ import datetime
 from sklearn import cross_validation
 import xgboost as xgb
 import os
-from sklearn import random_projection
+
 numGivenFeat=4096
-numFeats = numGivenFeat*6
+numFeats = 75
 
 trainTestIDs = []
 validationIDs = []
@@ -24,16 +24,19 @@ with open('stage1_sample_submission.csv') as csvfile:
     for row in reader:
         validationIDs.append(row['id'])
 
-dataFolder = '/home/zdestefa/data/KaggleDataBlockInfo'
+dataFolder = '/home/zdestefa/data/KaggleXGBoostPreds3'
 
-def getFeatDataFromFile(currentFile):
-    initFeatData = np.load(currentFile)
-    avgPool = np.mean(initFeatData,axis=0)
-    maxPool = np.mean(initFeatData,axis=0)
-    outVec = np.zeros((1,numGivenFeat*6))
-    outVec[0,range(numGivenFeat*3)] = avgPool
-    outVec[0,range(numGivenFeat*3,numGivenFeat*6)] = maxPool
-    return outVec
+def getFeatureData(featData):
+    featData2 = np.reshape(featData,featData.size)
+    if(featData.size<numFeats):
+        outputData= np.random.choice(featData2,size=(1,numFeats),replace=True)
+    else:
+        outputData =  np.random.choice(featData2,size=(1,numFeats),replace=False)
+    finalOutput = np.sort(outputData)
+    return finalOutput[::-1]
+
+
+
 
 
 def train_xgboost():
@@ -49,10 +52,11 @@ def train_xgboost():
     ind = 0
     for pInd in range(len(trainTestIDs)):
         patID = trainTestIDs[pInd]
-        fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
+        fileName = 'xgBoostPreds_'+patID+'.npy'
         currentFile = os.path.join(dataFolder, fileName)
         if(os.path.isfile(currentFile)):
-            x0[ind,:] = getFeatDataFromFile(currentFile)
+            initFeatData = np.load(currentFile)
+            x0[ind,:] = getFeatureData(initFeatData)
             curL = int(trainTestLabels[pInd])
             y0[ind] = curL
             if(curL<1):
@@ -66,13 +70,14 @@ def train_xgboost():
     numPtsTotal = numberUse+numPtsOther
 
     #There are 1035 0's and 362 1's
-    #numUseMax = [numPtsOther,numberUse]
-    #x = np.zeros((numPtsTotal, numFeats))
-    #y = np.zeros(numPtsTotal)
+    numUseMax = [numPtsOther,numberUse]
+    x = np.zeros((numPtsTotal, numFeats))
+    y = np.zeros(numPtsTotal)
 
-    numUseMax = [numZero,numOne] #use all the data
-    x = np.zeros((len(trainTestIDs),numFeats))
-    y = np.zeros(len(trainTestIDs))
+    #THIS SETUP PROVED TO BE THE WORST
+    #numUseMax = [numZero,numOne] #use all the data
+    #x = np.zeros((len(trainTestIDs),numFeats))
+    #y = np.zeros(len(trainTestIDs))
 
     numCat = np.zeros(2)
     indsUse2 = np.random.choice(range(len(y0)),len(y0)) #randomized order
@@ -90,14 +95,7 @@ def train_xgboost():
 
     print("Num Data Points" + str(len(y)))
 
-    #RANDOM PROJECTION CODE
-    print("pre-projected shape: " + str(x.shape))
-    transformer = random_projection.GaussianRandomProjection()
-    Xnew = transformer.fit_transform(x)
-    print("post-projection shape: " + str(Xnew.shape))
-
-    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(Xnew, y, random_state=42,
-                                                                   stratify=y,
+    trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
                                                                    test_size=0.2)
 
     clf = xgb.XGBRegressor(max_depth=10,
@@ -118,7 +116,7 @@ def make_submit():
     clf = train_xgboost()
 
 
-    """
+
     print('Kaggle Test Data being obtained')
     x2 = np.zeros((len(validationIDs), numFeats))
     ind = 0
@@ -148,7 +146,7 @@ def make_submit():
             if(curPred<0):
                 curPred=0
             writer.writerow({'id': validationIDs[ind], 'cancer': str(curPred)})
-    """
+
 
 
 if __name__ == '__main__':

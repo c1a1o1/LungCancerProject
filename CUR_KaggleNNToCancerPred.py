@@ -7,6 +7,42 @@ from sklearn import cross_validation
 import xgboost as xgb
 import os
 from sklearn import random_projection
+
+from keras.datasets import mnist
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, Activation, Flatten
+from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Convolution3D, MaxPooling3D
+from keras.utils import np_utils
+from keras import backend as K
+
+import scipy.io as sio
+from scipy.misc import imread, imresize, imsave
+import time
+import datetime
+
+from sklearn.decomposition import PCA,KernelPCA
+from convnetskeras.convnets import preprocess_image_batch, convnet
+from sklearn.cross_validation import train_test_split
+from sklearn import random_projection
+from sklearn import tree
+from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
+
+from keras.models import Sequential, Model
+from keras.layers import Flatten, Dense, Dropout, Reshape, Permute, Activation, \
+    Input, merge
+from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
+from keras.optimizers import SGD
+import numpy as np
+from scipy.misc import imread, imresize, imsave
+from sklearn import datasets, linear_model
+from convnetskeras.customlayers import convolution2Dgroup, crosschannelnormalization, \
+    splittensor, Softmax4D
+from convnetskeras.imagenet_tool import synset_to_id, id_to_synset,synset_to_dfs_ids
+import csv
+
+
 numGivenFeat=4096
 numFeats = numGivenFeat*6
 
@@ -91,27 +127,26 @@ def train_xgboost():
     print("Num Data Points" + str(len(y)))
 
     #RANDOM PROJECTION CODE
-    print("pre-projected shape: " + str(x.shape))
-    transformer = random_projection.GaussianRandomProjection()
-    Xnew = transformer.fit_transform(x)
-    print("post-projection shape: " + str(Xnew.shape))
+    #print("pre-projected shape: " + str(x.shape))
+    #transformer = random_projection.GaussianRandomProjection()
+    #Xnew = transformer.fit_transform(x)
+    #print("post-projection shape: " + str(Xnew.shape))
+    Xnew = x
 
     trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(Xnew, y, random_state=42,
                                                                    stratify=y,
                                                                    test_size=0.2)
 
-    clf = xgb.XGBRegressor(max_depth=10,
-                           n_estimators=1500,
-                           min_child_weight=9,
-                           learning_rate=0.05,
-                           nthread=8,
-                           subsample=0.80,
-                           colsample_bytree=0.80,
-                           seed=4242)
+    input_img2 = Input(shape=(numGivenFeat*6,))
+    layer1 = Dense(4096, init='normal', activation='relu')(input_img2)
+    layer2 = Dense(256, init='normal', activation='sigmoid')(layer1)
+    outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
+    kaggleModel = Model(input=input_img2, output=outputLayer)
+    kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+    kaggleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=100,
+                      verbose=1, validation_data=(val_x, val_y))
 
-    clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True,
-            eval_metric='logloss', early_stopping_rounds=100)
-    return clf
+    return kaggleModel
 
 
 def make_submit():
