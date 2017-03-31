@@ -24,10 +24,6 @@ from scipy.misc import imresize
 
 fileFolder = '/home/zdestefa/data/huBlockDataSetKaggleOrigSize'
 
-def getVolData(fileP):
-    curMATcontent = sio.loadmat(os.path.join(fileFolder,fileP))
-    volData = curMATcontent["huBlocksOutput"]
-    return volData.astype('float32')
 
 origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 
@@ -81,8 +77,24 @@ model.add(Flatten())
 model.add(Dense(2, init='normal',activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 
-
-
+def dataGenerator(filesToProcess,indRange):
+    while 1:
+        for ind in range(len(indRange)):
+            fileP = filesToProcess[indRange[ind]]
+            curMATcontent = sio.loadmat(os.path.join(fileFolder, fileP))
+            huBlocks = curMATcontent["huBlocksOutput"]
+            for nodInd in range(len(huBlocks)):
+                currentBlock = huBlocks[nodInd, :, :, :]
+                if K.image_dim_ordering() == 'th':
+                    currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
+                else:
+                    currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
+                yy = np.round(np.random.rand(1))
+                YCur = int(yy[0])
+                YUse = np_utils.to_categorical(YCur, 2)
+                #print("Ind:" + str(ind))
+                yield (currentBlock.astype('float32'),YUse)
+"""
 def genResNetFeatFile(fileP):
     patID = fileP[9:len(fileP) - 4]
     huBlocks= getVolData(fileP)
@@ -97,16 +109,12 @@ def genResNetFeatFile(fileP):
         print("obtaining resnet data for block: " + str(blockNum))
         feats3 = getResNetData(currentBlock)
         np.save(fileName3, feats3)
+"""
+filesToProcess = os.listdir(fileFolder)
+numFiles = len(filesToProcess)
+trainRange = range(50)
+validationRange = range(51,60)
+model.fit_generator(dataGenerator(filesToProcess, trainRange),
+                    samples_per_epoch = 1000, nb_epoch=100, nb_val_samples=50,
+                    verbose=1, validation_data=dataGenerator(filesToProcess, validationRange))
 
-
-def calc_featuresA():
-    filesToProcess = os.listdir(fileFolder)
-    numFiles = len(filesToProcess)
-    for curInd in range(numFiles):
-        print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
-        genResNetFeatFile(filesToProcess[curInd])
-
-
-
-if __name__ == '__main__':
-    calc_featuresA()
