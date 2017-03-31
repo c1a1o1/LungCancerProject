@@ -32,22 +32,57 @@ def getVolData(fileP):
 origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 
 #net2 = Model(input=origNet.input,output=origNet.get_layer('flatten').output)
-net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
+#net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
+
+#Trying to model the following network
 """
 
+def create_network():
+    init = Kaiming()
+    padding = dict(pad_d=1, pad_h=1, pad_w=1)
+    strides = dict(str_d=2, str_h=2, str_w=2)
+    dilation = dict(dil_d=2, dil_h=2, dil_w=2)
+    common = dict(init=init, batch_norm=True, activation=Rectlin())
+    layers = [
+        Conv((9, 9, 9, 16), padding=padding, strides=strides, init=init, activation=Rectlin()),
+        Conv((5, 5, 5, 32), dilation=dilation, **common),
+        Conv((3, 3, 3, 64), dilation=dilation, **common),
+        Pooling((2, 2, 2), padding=padding, strides=strides),
+        Conv((2, 2, 2, 128), **common),
+        Conv((2, 2, 2, 128), **common),
+        Conv((2, 2, 2, 128), **common),
+        Conv((2, 2, 2, 256), **common),
+        Conv((2, 2, 2, 1024), **common),
+        Conv((2, 2, 2, 4096), **common),
+        Conv((2, 2, 2, 2048), **common),
+        Conv((2, 2, 2, 1024), **common),
+        Dropout(),
+        Affine(2, init=Kaiming(local=False), batch_norm=True, activation=Softmax())
+    ]
+    return Model(layers=layers)
+
+"""
+input_shape = (1, 64, 64,64)
 model = Sequential()
-model.add(Convolution3D(nb_filters, kernel_size[0], kernel_size[1],kernel_size[2],
-                        border_mode='valid',
-                        input_shape=input_shape))
-model.add(MaxPooling3D(pool_size=pool_size))
+model.add(Convolution3D(16,9,9,9,border_mode='valid',input_shape=input_shape,activation='relu'))
+model.add(Convolution3D(32,5,5,5,border_mode='valid',activation='relu'))
+model.add(Convolution3D(64, 3, 3,3,border_mode='valid',activation='relu'))
+model.add(MaxPooling3D(pool_size=(2,2,2)))
+model.add(Convolution3D(128, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(128, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(128, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(256, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(1024, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(4096, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(2048, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(1024, 2, 2,2,border_mode='valid',activation='relu'))
 model.add(Dropout(0.2))
 model.add(Flatten())
-#model.add(Dense(128, init='normal',activation='relu'))
-model.add(Dense(16, init='normal',activation='sigmoid'))
-model.add(Dense(nb_classes, init='normal',activation='softmax'))
+model.add(Dense(2, init='normal',activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 
-"""
+
+
 def genResNetFeatFile(fileP):
     patID = fileP[9:len(fileP) - 4]
     huBlocks= getVolData(fileP)
@@ -63,38 +98,6 @@ def genResNetFeatFile(fileP):
         feats3 = getResNetData(currentBlock)
         np.save(fileName3, feats3)
 
-
-cnt = 0
-dx = 40
-ds = 512
-
-def getResNetData(curData):
-    curImg = curData
-    #curImg[curImg==-2000]=0
-    batch = []
-    #for i in range(0, curData.shape[0] - 3, 3):
-    for i in range(curData.shape[2]):
-        tmp = []
-        for j in range(3):
-            img = curImg[i]
-            #
-            #NOTE: DO NOT DO THE EQUALIZEHIST PROCEDURE
-            #   RESULTS ARE DRAMATICALLY BETTER WITHOUT IT
-            #   WENT FROM 0.52 LOG LOSS TO 0.33 LOG LOSS
-            #
-            #RESULTS ARE ALSO MUCH BETTER REPLACIATING THE IMAGE
-            #   IN EACH CHANNEL RATHER THAN TRY TO COMBINE
-            #   IMAGES IN THE COLOR CHANNELS
-            #
-            #img = 255.0 / np.amax(img) * img
-            #img = cv2.equalizeHist(img.astype(np.uint8))
-            #img = img[dx: ds - dx, dx: ds - dx]
-            img = cv2.resize(img, (224, 224))
-            tmp.append(img)
-        batch.append(np.array(tmp))
-    batch = np.array(batch)
-    feats3 = net3.predict(batch)
-    return feats3
 
 def calc_featuresA():
     filesToProcess = os.listdir(fileFolder)
