@@ -197,14 +197,6 @@ trn_xx, val_xx, trn_yy, val_yy = cross_validation.train_test_split(xx, YYenc, ra
                                                                stratify=YYenc,
                                                                test_size=0.2)
 
-input_img2 = Input(shape=(numLayerFeat*2,))
-layer2 = Dense(32, init='normal', activation='sigmoid')(input_img2)
-outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
-kaggleModel = Model(input=input_img2, output=outputLayer)
-kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=100,
-                  verbose=1, validation_data=(val_xx, val_yy))
-
 print('Kaggle Test Data being obtained')
 x2 = np.zeros((len(validationIDs), numFeatsA))
 for pInd in range(len(validationIDs)):
@@ -216,21 +208,46 @@ for pInd in range(len(validationIDs)):
         ind=ind+1
         print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(trainTestIDs)))
 
+input_img2 = Input(shape=(numLayerFeat*2,))
+layer2 = Dense(32, init='normal', activation='sigmoid')(input_img2)
+outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
+kaggleModel = Model(input=input_img2, output=outputLayer)
+kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=100,
+                  verbose=1, validation_data=(val_xx, val_yy))
+
+def writeKagglePredictionFile(prefixString,pred):
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
+    fileName = prefixString + st + '.csv'
+
+    with open(fileName, 'w') as csvfile:
+        fieldnames = ['id', 'cancer']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for ind in range(len(validationIDs)):
+            curPred = pred[ind]
+            if (curPred < 0):
+                curPred = 0
+            writer.writerow({'id': validationIDs[ind], 'cancer': str(curPred)})
+
 pred = kaggleModel.predict(x2)
+prefixString = 'submissions/KaggleNN_NN_Prediction_'
+writeKagglePredictionFile(prefixString,pred)
 
-ts = time.time()
-st = datetime.datetime.fromtimestamp(ts).strftime('%Y_%m_%d__%H_%M_%S')
-fileName = 'submissions/KaggleNN_NN_Prediction_' + st + '.csv'
+clf = xgb.XGBRegressor(max_depth=10,
+                           n_estimators=1500,
+                           min_child_weight=9,
+                           learning_rate=0.05,
+                           nthread=8,
+                           subsample=0.80,
+                           colsample_bytree=0.80,
+                           seed=4242)
 
-with open(fileName, 'w') as csvfile:
-    fieldnames = ['id', 'cancer']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+clf.fit(trn_xx, trn_yy, eval_set=[(val_xx, val_yy)], verbose=True,
+        eval_metric='logloss', early_stopping_rounds=100)
 
-    writer.writeheader()
-    for ind in range(len(validationIDs)):
-        curPred = pred[ind]
-        if(curPred<0):
-            curPred=0
-        writer.writerow({'id': validationIDs[ind], 'cancer': str(curPred)})
-
-
+pred2 = clf.predict(x2)
+prefixString2 = 'submissions/KaggleNN_XGBoost_Prediction_'
+writeKagglePredictionFile(prefixString2,pred2)

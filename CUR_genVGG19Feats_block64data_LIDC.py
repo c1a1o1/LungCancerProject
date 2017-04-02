@@ -22,10 +22,10 @@ from keras.applications.vgg19 import VGG19
 import scipy.io as sio
 from scipy.misc import imresize
 
-fileFolder = '/home/zdestefa/data/huBlockDataSetKaggleOrigSize'
+fileFolder2 = '/home/zdestefa/data/huBlockDataSetKaggleOrigSize'
+fileFolder = '/home/zdestefa/LUNA16/data/DOI_huBlockDataSet'
 
-
-origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
+#origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
 
 #net2 = Model(input=origNet.input,output=origNet.get_layer('flatten').output)
 #net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
@@ -71,11 +71,15 @@ model.add(Convolution3D(256, 2, 2,2,border_mode='valid',activation='relu'))
 model.add(Convolution3D(1024, 2, 2,2,border_mode='valid',activation='relu'))
 model.add(Convolution3D(4096, 2, 2,2,border_mode='valid',activation='relu'))
 model.add(Convolution3D(2048, 2, 2,2,border_mode='valid',activation='relu'))
-model.add(Convolution3D(1024, 2, 2,2,border_mode='valid',activation='relu'))
+model.add(Convolution3D(1024, 2, 2,2,border_mode='valid',activation='relu',name='prePredictLayer'))
 model.add(Dropout(0.2))
 model.add(Flatten())
+#KEPT HAVING OUT OF MEMORY ERROR WHEN I TRIED THIS
+#  model.add(Dense(256,init='normal',activation='relu',))
 model.add(Dense(2, init='normal',activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+
+model2 = Model(input=model.input,output=model.get_layer('prePredictLayer').output)
 
 def dataGenerator(filesToProcess,indRange):
     while 1:
@@ -83,39 +87,61 @@ def dataGenerator(filesToProcess,indRange):
             fileP = filesToProcess[indRange[ind]]
             curMATcontent = sio.loadmat(os.path.join(fileFolder, fileP))
             huBlocks = curMATcontent["huBlocksOutput"]
-            cancerNums = curMATcontent["outputCancerScores"]
+            cancerNums = np.reshape(curMATcontent["outputCancerScores"],len(huBlocks))
             for nodInd in range(len(huBlocks)):
                 currentBlock = huBlocks[nodInd, :, :, :]
                 if K.image_dim_ordering() == 'th':
                     currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
                 else:
                     currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
-                yy = np.round(np.random.rand(1))
-                YCur = int(yy[0])
+                if(cancerNums[nodInd]>0):
+                    YCur=1
+                else:
+                    YCur=0
                 YUse = np_utils.to_categorical(YCur, 2)
                 #print("Ind:" + str(ind))
                 yield (currentBlock.astype('float32'),YUse)
-"""
-def genResNetFeatFile(fileP):
+
+
+
+
+def generateNNoutputFiles(fileP):
     patID = fileP[9:len(fileP) - 4]
-    huBlocks= getVolData(fileP)
+    curMATcontent = sio.loadmat(os.path.join(fileFolder2, fileP))
+    huBlocks = curMATcontent["huBlocksOutput"]
     rPrefix = 'resnetFeats_'
-    folder4096prefix = 'data/blockFilesResizedVGG19to4096Kaggle/'
-    blockNum=0
+    folder4096prefix = 'data/blockFilesResizedUserNNPrediction/'
+    folder4096prefix2 = 'data/blockFilesResizedUserNNLastLayer/'
+    blockNum = 0
     for nodInd in range(len(huBlocks)):
-        currentBlock = huBlocks[nodInd,:,:,:]
+        currentBlock = huBlocks[nodInd, :, :, :]
+        if K.image_dim_ordering() == 'th':
+            currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
+        else:
+            currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
         noduleSuffix = '_Block_' + str(blockNum)
-        blockNum = blockNum+1
-        fileName3 = folder4096prefix + rPrefix +patID + noduleSuffix
+        blockNum = blockNum + 1
+        fileName3 = folder4096prefix + rPrefix + patID + noduleSuffix
+        fileName4 = folder4096prefix2 + rPrefix + patID + noduleSuffix
         print("obtaining resnet data for block: " + str(blockNum))
-        feats3 = getResNetData(currentBlock)
-        np.save(fileName3, feats3)
-"""
+        output3 = model.predict(currentBlock)
+        output4 = model2.predict(currentBlock)
+        np.save(fileName3, output3)
+        np.save(fileName4, output4)
+
 filesToProcess = os.listdir(fileFolder)
 numFiles = len(filesToProcess)
-trainRange = range(50)
-validationRange = range(51,60)
-model.fit_generator(dataGenerator(filesToProcess, trainRange),
-                    samples_per_epoch = 1000, nb_epoch=100, nb_val_samples=50,
-                    verbose=1, validation_data=dataGenerator(filesToProcess, validationRange))
+shuffInds = np.random.permutation(numFiles)
+endTrainInd = int(np.floor(numFiles*0.8))
+trainInds = shuffInds[0:endTrainInd]
+validInds = shuffInds[endTrainInd:numFiles]
+model.fit_generator(dataGenerator(filesToProcess, trainInds),
+                    samples_per_epoch = 1000, nb_epoch=10, nb_val_samples=50,
+                    verbose=1, validation_data=dataGenerator(filesToProcess, validInds))
+
+filesToProcess2 = os.listdir(fileFolder2)
+numFiles = len(filesToProcess2)
+for curInd in range(numFiles):
+    print('Obtaining features for file_' + str(curInd) + '_of_' + str(numFiles))
+    generateNNoutputFiles(filesToProcess2[curInd])
 
