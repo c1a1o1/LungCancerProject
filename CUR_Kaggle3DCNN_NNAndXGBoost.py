@@ -155,7 +155,7 @@ numBlocks2 = 3*numPtsUse
 shuffInds = np.random.permutation(numBlocks2)
 endTrainInd = int(np.floor(numBlocks2*0.8))
 trainInds = finalIndsUse[shuffInds[0:endTrainInd]]
-validInds = finalIndsUse[shuffInds[endTrainInd:numFiles]]
+validInds = finalIndsUse[shuffInds[endTrainInd:numBlocks2]]
 
 def dataGenerator(filesToProcess,indRange):
     while 1:
