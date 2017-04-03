@@ -120,7 +120,7 @@ outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
 noduleModel = Model(input=input_imgBlocks, output=outputLayer)
 noduleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 print("Now fitting Neural Network to predict nodule/no-nodule")
-noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=20,
+noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=30,
                   verbose=1, validation_data=(val_x, val_y))
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
@@ -191,14 +191,18 @@ print('Num0: ' + str(np.sum(yy<1)) + '; Num1:' + str(np.sum(yy>0)))
 
 print("Num Data Points" + str(len(yy)))
 
-YYenc = np_utils.to_categorical(yy, 2)
 
-trn_xx, val_xx, trn_yy, val_yy = cross_validation.train_test_split(xx, YYenc, random_state=42,
-                                                               stratify=YYenc,
+
+trn_xx, val_xx, trn_yy2, val_yy2 = cross_validation.train_test_split(xx, yy, random_state=42,
+                                                               stratify=yy,
                                                                test_size=0.2)
+
+trn_yy = np_utils.to_categorical(trn_yy2, 2)
+val_yy = np_utils.to_categorical(val_yy2, 2)
 
 print('Kaggle Test Data being obtained')
 x2 = np.zeros((len(validationIDs), numFeatsA))
+ind=0
 for pInd in range(len(validationIDs)):
     patID = validationIDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
@@ -213,7 +217,7 @@ layer2 = Dense(32, init='normal', activation='sigmoid')(input_img2)
 outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=100,
+kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
                   verbose=1, validation_data=(val_xx, val_yy))
 
 def writeKagglePredictionFile(prefixString,pred):
@@ -234,7 +238,8 @@ def writeKagglePredictionFile(prefixString,pred):
 
 pred = kaggleModel.predict(x2)
 prefixString = 'submissions/KaggleNN_NN_Prediction_'
-writeKagglePredictionFile(prefixString,pred)
+predOut = pred[:,1]
+writeKagglePredictionFile(prefixString,predOut)
 
 clf = xgb.XGBRegressor(max_depth=10,
                            n_estimators=1500,
@@ -245,7 +250,7 @@ clf = xgb.XGBRegressor(max_depth=10,
                            colsample_bytree=0.80,
                            seed=4242)
 
-clf.fit(trn_xx, trn_yy, eval_set=[(val_xx, val_yy)], verbose=True,
+clf.fit(trn_xx, trn_yy2, eval_set=[(val_xx, val_yy2)], verbose=True,
         eval_metric='logloss', early_stopping_rounds=100)
 
 pred2 = clf.predict(x2)
