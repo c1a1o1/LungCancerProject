@@ -25,13 +25,6 @@ from sklearn import cross_validation
 fileFolder2 = '/home/zdestefa/data/huBlockDataSetKaggleOrigSize'
 fileFolder = '/home/zdestefa/LUNA16/data/DOI_huBlockDataSet'
 
-#origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
-
-#net2 = Model(input=origNet.input,output=origNet.get_layer('flatten').output)
-#net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
-
-#Trying to model the following network
-
 input_shape = (1, 64, 64,64)
 model = Sequential()
 model.add(Convolution3D(16,9,9,9,border_mode='valid',input_shape=input_shape,activation='relu'))
@@ -44,9 +37,6 @@ model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accura
 
 model2 = Model(input=model.input,output=model.get_layer('prePredictLayer').output)
 
-#dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
-#resNetFiles = os.listdir(dataFolderA)
-#numDataPts = len(resNetFiles)
 filesToProcess = os.listdir(fileFolder)
 numFiles = len(filesToProcess)
 
@@ -71,11 +61,6 @@ for ind in range(numFiles):
     cancerNums = np.reshape(curMATcontent["outputCancerScores"], len(huBlocks))
     print("Processing file " + str(ind) + " of " + str(numFiles))
     for nodInd in range(len(huBlocks)):
-        #currentBlock = huBlocks[nodInd, :, :, :]
-        #if K.image_dim_ordering() == 'th':
-        #    currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
-        #else:
-        #    currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
         if (cancerNums[nodInd] > 0):
             YCur = 1
         else:
@@ -84,9 +69,6 @@ for ind in range(numFiles):
         fileInds[allInd] = ind
         noduleInds[allInd] = nodInd
         allInd = allInd+1
-        #YUse = np_utils.to_categorical(YCur, 2)
-        # print("Ind:" + str(ind))
-        #yield (currentBlock.astype('float32'), YUse)
 
 numZeros = np.sum(yAll<1)
 numOne = len(yAll)-numZeros
@@ -94,8 +76,7 @@ numPtsUse = min(numZeros,numOne)
 
 numUseMax = [2*numPtsUse,numPtsUse]
 xUse = np.zeros((3*numPtsUse, 1,64,64,64))
-yUse = np.zeros(3*numPtsUse)
-
+finalIndsUse = np.zeros(3*numPtsUse)
 
 numOut = np.zeros(2)
 indsToDrawFrom = np.random.choice(range(len(yAll)),size=len(yAll))
@@ -104,50 +85,33 @@ for ind0 in indsToDrawFrom:
     curOut = int(yAll[ind0])
     if(numOut[curOut] < numUseMax[curOut]):
         numOut[curOut] = numOut[curOut] + 1
-        yUse[outInd] = curOut
-        fileIndUse = int(fileInds[ind0])
-        fileP = filesToProcess[fileIndUse]
-        curMATcontent = sio.loadmat(os.path.join(fileFolder, fileP))
-        huBlocks = curMATcontent["huBlocksOutput"]
-        noduleIndUse = int(noduleInds[ind0])
-        currentBlock = huBlocks[noduleIndUse, :, :, :]
-        if K.image_dim_ordering() == 'th':
-            currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
-        else:
-            currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
-
-        xUse[outInd,:,:,:,:] = currentBlock
+        finalIndsUse[outInd] = ind0
         outInd = outInd+1
         print("Adding in block " + str(outInd) + " of " + str(3*numPtsUse))
 
-trn_xx, val_xx, trn_yy2, val_yy2 = cross_validation.train_test_split(xUse, yUse, random_state=42,
-                                                               stratify=yUse,
-                                                               test_size=0.2)
-
-trn_yy = np_utils.to_categorical(trn_yy2, 2)
-val_yy = np_utils.to_categorical(val_yy2, 2)
-
+numBlocks2 = 3*numPtsUse
+shuffInds = np.random.permutation(numBlocks2)
+endTrainInd = int(np.floor(numBlocks2*0.8))
+trainInds = finalIndsUse[shuffInds[0:endTrainInd]]
+validInds = finalIndsUse[shuffInds[endTrainInd:numFiles]]
 
 def dataGenerator(filesToProcess,indRange):
     while 1:
-        for ind in range(len(indRange)):
-            fileP = filesToProcess[indRange[ind]]
+        for ind in indRange:
+            fileIndUse = int(fileInds[ind])
+            fileP = filesToProcess[fileIndUse]
             curMATcontent = sio.loadmat(os.path.join(fileFolder, fileP))
             huBlocks = curMATcontent["huBlocksOutput"]
-            cancerNums = np.reshape(curMATcontent["outputCancerScores"],len(huBlocks))
-            for nodInd in range(len(huBlocks)):
-                currentBlock = huBlocks[nodInd, :, :, :]
-                if K.image_dim_ordering() == 'th':
-                    currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
-                else:
-                    currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
-                if(cancerNums[nodInd]>0):
-                    YCur=1
-                else:
-                    YCur=0
-                YUse = np_utils.to_categorical(YCur, 2)
-                #print("Ind:" + str(ind))
-                yield (currentBlock.astype('float32'),YUse)
+            noduleIndUse = int(noduleInds[ind])
+            currentBlock = huBlocks[noduleIndUse, :, :, :]
+            if K.image_dim_ordering() == 'th':
+                currentBlock = currentBlock.reshape(1, 1, 64, 64, 64)
+            else:
+                currentBlock = currentBlock.reshape(1, 64, 64, 64, 1)
+            YCur = yAll[ind]
+            YUse = np_utils.to_categorical(YCur, 2)
+            #print("Ind:" + str(ind))
+            yield (currentBlock.astype('float32'),YUse)
 
 
 
@@ -176,19 +140,11 @@ def generateNNoutputFiles(fileP):
         np.save(fileName3, output3)
         np.save(fileName4, output4)
 
-model.fit(trn_xx,trn_yy,samples_per_epoch = 1000, nb_epoch=10, nb_val_samples=50,
-                    verbose=1, validation_data=(val_xx,val_yy))
-"""
-filesToProcess = os.listdir(fileFolder)
-numFiles = len(filesToProcess)
-shuffInds = np.random.permutation(numFiles)
-endTrainInd = int(np.floor(numFiles*0.8))
-trainInds = shuffInds[0:endTrainInd]
-validInds = shuffInds[endTrainInd:numFiles]
+
 model.fit_generator(dataGenerator(filesToProcess, trainInds),
                     samples_per_epoch = 1000, nb_epoch=10, nb_val_samples=50,
                     verbose=1, validation_data=dataGenerator(filesToProcess, validInds))
-
+"""
 filesToProcess2 = os.listdir(fileFolder2)
 numFiles = len(filesToProcess2)
 for curInd in range(numFiles):
