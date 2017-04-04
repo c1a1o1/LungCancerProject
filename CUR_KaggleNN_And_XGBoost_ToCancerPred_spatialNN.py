@@ -88,7 +88,7 @@ numOne = len(y0)-numZeros
 numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
 
-numUseMax = [numPtsUse,numPtsUse]
+numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
 x = np.zeros((totalNumPts, numConcatFeats))
 y = np.zeros(totalNumPts)
