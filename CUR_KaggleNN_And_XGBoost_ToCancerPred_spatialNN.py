@@ -124,7 +124,7 @@ print("Now fitting Neural Network to predict nodule/no-nodule")
 noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=30,
                   verbose=1, validation_data=(val_x, val_y))
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
-
+"""
 def getFeatDataFromFile(currentFile):
     initFeatData = np.load(currentFile)
     layerFeatData = noduleModelPreLayer.predict(initFeatData)
@@ -134,7 +134,7 @@ def getFeatDataFromFile(currentFile):
     outVec[0,range(numLayerFeat)] = avgPool
     outVec[0,range(numLayerFeat,numLayerFeat*2)] = maxPool
     return outVec
-
+"""
 numRowsTotal = 150
 def getFeatDataFromFile2(currentFile):
     initFeatData = np.load(currentFile)
@@ -153,9 +153,8 @@ def getFeatDataFromFile2(currentFile):
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 numFeatsA = numLayerFeat*2
-numPossibleDataPts = len(kaggleFiles)
-x1 = np.zeros((numPossibleDataPts, numFeatsA))
-y1 = np.zeros(numPossibleDataPts)
+x1 = np.zeros((len(trainTestIDs), numRowsTotal,numLayerFeat))
+y1 = np.zeros(len(trainTestIDs))
 
 numZero = 0
 numOne = 0
@@ -165,7 +164,7 @@ for pInd in range(len(trainTestIDs)):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,:] = getFeatDataFromFile(currentFile)
+        x1[ind,:,:] = getFeatDataFromFile2(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -192,14 +191,14 @@ trn_yy = np_utils.to_categorical(trn_yy2, 2)
 val_yy = np_utils.to_categorical(val_yy2, 2)
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(validationIDs), numFeatsA))
+x2 = np.zeros((len(validationIDs), numRowsTotal,numLayerFeat))
 ind=0
 for pInd in range(len(validationIDs)):
     patID = validationIDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind,:] = getFeatDataFromFile(currentFile)
+        x2[ind,:] = getFeatDataFromFile2(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
 
@@ -213,7 +212,7 @@ model.add(Dropout(0.25))
 model.add(Flatten())
 """
 input_img2 = Input(shape=(numRowsTotal,numLayerFeat))
-convLayer1 = Convolution2D(32,kernel_size=(5,1),activation='relu')(input_img2)
+convLayer1 = Convolution2D(32,5,1,border_mode='valid',activation='relu')(input_img2)
 maxLayer2 = MaxPooling2D(pool_size=(10,5))(convLayer1)
 dropout1 = Dropout(0.25)(maxLayer2)
 flatten1 = Flatten()(dropout1)
