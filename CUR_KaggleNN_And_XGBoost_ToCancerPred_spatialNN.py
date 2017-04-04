@@ -88,9 +88,7 @@ numOne = len(y0)-numZeros
 numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
 
-#THIS IMBALANCE PRODUCES BETTER RESULT THAN PERFECTLY BALANCED
-#   MAKE SURE TO KEEP IT
-numUseMax = [2*numPtsUse,numPtsUse]
+numUseMax = [numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
 x = np.zeros((totalNumPts, numConcatFeats))
 y = np.zeros(totalNumPts)
@@ -137,6 +135,20 @@ def getFeatDataFromFile(currentFile):
     outVec[0,range(numLayerFeat,numLayerFeat*2)] = maxPool
     return outVec
 
+numRowsTotal = 150
+def getFeatDataFromFile2(currentFile):
+    initFeatData = np.load(currentFile)
+    layerFeatData = noduleModelPreLayer.predict(initFeatData)
+    outputData = np.zeros((numRowsTotal,256))
+    if(layerFeatData.shape[0] >= numRowsTotal):
+        outputData = layerFeatData[0:numRowsTotal,:]
+    else:
+        for ii in range(numRowsTotal):
+            curRind=ii%layerFeatData.shape[0]
+            outputData[ii,:] = layerFeatData[curRind,:]
+    return outputData
+
+
 
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
@@ -161,32 +173,8 @@ for pInd in range(len(trainTestIDs)):
         else:
             numOne = numOne+1
         ind=ind+1
-        print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
-"""
-numberUse = min(numOne,numZero)
-numPtsOther = int(np.floor(numberUse*2))
-numPtsTotal = numberUse+numPtsOther
+        print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(trainTestIDs)))
 
-#There are 1035 0's and 362 1's
-#numUseMax = [numPtsOther,numberUse]
-#x = np.zeros((numPtsTotal, numFeats))
-#y = np.zeros(numPtsTotal)
-
-numUseMax = [numZero,numOne] #use all the data
-xx = np.zeros((len(trainTestIDs),numFeats))
-yy = np.zeros(len(trainTestIDs))
-
-numCat = np.zeros(2)
-indsUse2 = np.random.choice(range(len(y0)),len(y0)) #randomized order
-cInd = 0
-for pInd in indsUse2:
-    curLabel = int(y1[pInd])
-    if(numCat[curLabel]<numUseMax[curLabel]):
-        numCat[curLabel] = numCat[curLabel]+1
-        xx[cInd,:] = x1[pInd,:]
-        yy[cInd] = curLabel
-        cInd = cInd+1
-"""
 xx=x1
 yy=y1
 print('Finished getting Kaggle train/test data')
@@ -213,10 +201,24 @@ for pInd in range(len(validationIDs)):
     if(os.path.isfile(currentFile)):
         x2[ind,:] = getFeatDataFromFile(currentFile)
         ind=ind+1
-        print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(trainTestIDs)))
+        print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
 
-input_img2 = Input(shape=(numLayerFeat*2,))
-layer2 = Dense(32, init='normal', activation='sigmoid')(input_img2)
+"""
+model.add(Conv2D(32, kernel_size=(3, 3),
+                 activation='relu',
+                 input_shape=input_shape))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Dropout(0.25))
+model.add(Flatten())
+"""
+input_img2 = Input(shape=(numRowsTotal,numLayerFeat))
+convLayer1 = Convolution2D(32,kernel_size=(5,1),activation='relu')(input_img2)
+maxLayer2 = MaxPooling2D(pool_size=(10,5))(convLayer1)
+dropout1 = Dropout(0.25)(maxLayer2)
+flatten1 = Flatten()(dropout1)
+fc1 = Dense(256,init='normal',activation='relu')(flatten1)
+layer2 = Dense(32, init='normal', activation='sigmoid')(fc1)
 outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
