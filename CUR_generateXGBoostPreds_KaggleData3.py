@@ -203,47 +203,57 @@ for fInd in range(len(matFiles)):
     huBlocks = []
     numPossibleLungThreshold = np.floor(64 * 64 * 64 * 0.35)
     resizedHUdata = zoom(rawHUdata,resizeData,mode='nearest',order=0)
-    for ii in range(len(xValues)):
-        curPtR = xValues[ii]
-        curPtC = yValues[ii]
-        curPtS = zValues[ii]
+    huBlockInds = []
+    curBlockInd = 0
+    for xI in range(len(rangeX)):
+        for yI in range(len(rangeY)):
+            for zI in range(len(rangeZ)):
+                curPtR = xValues[xI]
+                curPtC = yValues[yI]
+                curPtS = zValues[zI]
 
-        xMin = curPtR - blockDimHalf
-        xMax = xMin + blockDim
-        yMin = curPtC - blockDimHalf
-        yMax = yMin + blockDim
-        zMin = curPtS - blockDimHalf
-        zMax = zMin + blockDim
-        currentHUdataBlock = resizedHUdata[xMin:xMax, yMin:yMax, zMin:zMax]
-        numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
-        if (numPossibleLung > numPossibleLungThreshold):
-            print("Num Lung: " + str(numPossibleLung))
-            huBlocks.append(currentHUdataBlock)
+                xMin = curPtR - blockDimHalf
+                xMax = xMin + blockDim
+                yMin = curPtC - blockDimHalf
+                yMax = yMin + blockDim
+                zMin = curPtS - blockDimHalf
+                zMax = zMin + blockDim
+                currentHUdataBlock = resizedHUdata[xMin:xMax, yMin:yMax, zMin:zMax]
+                numPossibleLung = np.sum(np.logical_and(currentHUdataBlock > -1200, currentHUdataBlock < -700))
+                if (numPossibleLung > numPossibleLungThreshold):
+                    print("Num Lung: " + str(numPossibleLung))
+                    huBlockInds.append([xI,yI,zI])
+                    huBlocks.append(currentHUdataBlock)
+                    curBlockInd = curBlockInd + 1
 
 
-    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo2'
+    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo3'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
     blockPreds = []
     currentInd = 0
     numBlocks = len(huBlocks)
-    outputMatrix = np.zeros((numBlocks, numConcatFeats))
+    outputTensor = np.zeros((len(rangeX), len(rangeY), len(rangeZ), numConcatFeats))
     startTime = datetime.datetime.now()
     for block in huBlocks:
         print("Processing block " + str(currentInd+1) + " of " + str(len(huBlocks)))
         feats = getResNetData(block)
-        outputMatrix[currentInd, 0:numGivenFeat] = np.mean(feats, axis=0)
-        outputMatrix[currentInd, numGivenFeat:numGivenFeat * 2] = np.max(feats, axis=0)  # this causes potential overfit. should remove
-        outputMatrix[currentInd, numGivenFeat * 2:numGivenFeat * 3] = np.min(feats, axis=0)  # this causes potential overfit. should remove
+        indices = huBlockInds[currentInd]
+        xInd = indices[0]
+        yInd = indices[1]
+        zInd = indices[2]
+        outputTensor[xInd, yInd, zInd, 0:numGivenFeat] = np.mean(feats, axis=0)
+        outputTensor[xInd, yInd, zInd, numGivenFeat:numGivenFeat * 2] = np.max(feats, axis=0)  # this causes potential overfit. should remove
+        outputTensor[xInd, yInd, zInd, numGivenFeat * 2:numGivenFeat * 3] = np.min(feats, axis=0)  # this causes potential overfit. should remove
         #blockPreds.append(clf.predict(outputMatrix))
         currentInd = currentInd + 1
 
     ptFinishTime = datetime.datetime.now()
     print("Time To Process Pt Blocks: " + str(ptFinishTime-startTime))
     print("Now outputting XGBoost Prediction Array")
-    saveFile = os.path.join(saveFolder, 'blockInfoOutputMatrix_' + patID + '.npy')
-    np.save(saveFile, outputMatrix)
+    saveFile = os.path.join(saveFolder, 'blockInfoOutput4DTensor_' + patID + '.npy')
+    np.save(saveFile, outputTensor)
 
     # huBlocksOutput = np.zeros((len(huBlocks),64,64,64))
     # curI = 0

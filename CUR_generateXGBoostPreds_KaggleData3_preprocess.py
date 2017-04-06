@@ -45,7 +45,7 @@ dataFolder = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
 dataFolder2 = '/home/zdestefa/data/blockFilesResizedVGG19to4096Kaggle'
 
 
-curDir = '/home/zdestefa/data/rawHUdata'
+curDir = '/home/zdestefa/data/segFilesResizedAll'
 curDir2 = '/home/zdestefa/data/volResizeInfo'
 
 print('Loading Binary Array')
@@ -162,9 +162,9 @@ for fInd in range(len(matFiles)):
     print('Now Processing File ' + str(fInd) + ' of ' + str(len(matFiles)))
 
     curFile = os.path.join(curDir,matFiles[fInd])
-    patID = matFiles[fInd][7:len(matFiles[fInd])-4]
+    patID = matFiles[fInd][14:len(matFiles[fInd])-4]
 
-    curFile2 = os.path.join(curDir2, 'resizeTuple_' + patID + '.mat')
+    curFile2 = os.path.join(curDir2, 'segDCM_' + patID + '.mat')
     #huDataFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/HUarray_'
     #resizeTupleFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/resizeTuple_'
 
@@ -173,7 +173,7 @@ for fInd in range(len(matFiles)):
 
     matData = sio.loadmat(curFile)
     matData2 = sio.loadmat(curFile2)
-    rawHUdata = matData['dcmArrayHU']
+    rawHUdata = matData['outputDCM']
     resizeData = np.reshape(matData2['resizeTuple'],3)
     for ii in range(3):
         if(resizeData[ii]<0.1):
