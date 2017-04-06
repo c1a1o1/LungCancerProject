@@ -75,7 +75,7 @@ dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
 resNetFiles = os.listdir(dataFolderA)
 numDataPts = len(resNetFiles)
 
-"""
+
 x0 = np.zeros((numDataPts,numConcatFeats))
 y0 = np.zeros(numDataPts)
 
@@ -129,11 +129,11 @@ noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=30,
                   verbose=1, validation_data=(val_x, val_y))
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
-noduleModelPreLayer.save('noduleModelPreLayer.h5')
-"""
+#noduleModelPreLayer.save('noduleModelPreLayer.h5')
 
-noduleModelPreLayer = load_model('noduleModelPreLayer.h5')
-noduleModelPreLayer.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+
+#noduleModelPreLayer = load_model('noduleModelPreLayer.h5')
+#noduleModelPreLayer.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 """
 def getFeatDataFromFile(currentFile):
     initFeatData = np.load(currentFile)
