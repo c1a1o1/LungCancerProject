@@ -153,7 +153,7 @@ def getFeatDataFromFile2(currentFile):
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((len(trainTestIDs), numRowsTotal,numLayerFeat))
+x1 = np.zeros((len(trainTestIDs), 1,numRowsTotal,numLayerFeat))
 y1 = np.zeros(len(trainTestIDs))
 
 numZero = 0
@@ -164,7 +164,7 @@ for pInd in range(len(trainTestIDs)):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -191,14 +191,14 @@ trn_yy = np_utils.to_categorical(trn_yy2, 2)
 val_yy = np_utils.to_categorical(val_yy2, 2)
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(validationIDs), numRowsTotal,numLayerFeat))
+x2 = np.zeros((len(validationIDs), 1,numRowsTotal,numLayerFeat))
 ind=0
 for pInd in range(len(validationIDs)):
     patID = validationIDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind,:] = getFeatDataFromFile2(currentFile)
+        x2[ind, 0, :, :] = getFeatDataFromFile2(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
 
@@ -211,7 +211,7 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
 model.add(Flatten())
 """
-input_img2 = Input(shape=(numRowsTotal,numLayerFeat))
+input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
 convLayer1 = Convolution2D(32,5,1,border_mode='valid',activation='relu')(input_img2)
 maxLayer2 = MaxPooling2D(pool_size=(10,5))(convLayer1)
 dropout1 = Dropout(0.25)(maxLayer2)
