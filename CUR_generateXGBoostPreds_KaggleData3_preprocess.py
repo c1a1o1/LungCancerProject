@@ -164,7 +164,7 @@ for fInd in range(len(matFiles)):
     curFile = os.path.join(curDir,matFiles[fInd])
     patID = matFiles[fInd][14:len(matFiles[fInd])-4]
 
-    curFile2 = os.path.join(curDir2, 'segDCM_' + patID + '.mat')
+    curFile2 = os.path.join(curDir2, 'resizeTuple_' + patID + '.mat')
     #huDataFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/HUarray_'
     #resizeTupleFilePrefix = '/home/zdestefa/LUNA16/data/DOI_huAndResizeInfo/resizeTuple_'
 
@@ -227,7 +227,7 @@ for fInd in range(len(matFiles)):
                     curBlockInd = curBlockInd + 1
 
 
-    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo3'
+    saveFolder = '/home/zdestefa/data/KaggleDataBlockInfo3Preprocess'
 
     print("Now putting each lung block through ResNet and XGBoost")
 
