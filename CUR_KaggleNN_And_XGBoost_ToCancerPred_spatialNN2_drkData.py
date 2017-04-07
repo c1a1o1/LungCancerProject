@@ -71,7 +71,8 @@ def getFeatureData(fileNm,dataFold):
     return outVec
 
 dataFolder = '/home/zdestefa/data/KaggleDataBlockInfo2'
-dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
+#dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
+dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096_DanielrkData'
 resNetFiles = os.listdir(dataFolderA)
 numDataPts = len(resNetFiles)
 
@@ -81,9 +82,9 @@ y0 = np.zeros(numDataPts)
 
 for ind in range(numDataPts):
     if(resNetFiles[ind].endswith("label0.npy")):
-        y0[ind] = 1
-    else:
         y0[ind] = 0
+    else:
+        y0[ind] = 1
 
 
 
@@ -92,7 +93,8 @@ numOne = len(y0)-numZeros
 numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
 
-numUseMax = [2*numPtsUse,numPtsUse]
+#numUseMax = [2*numPtsUse,numPtsUse]
+numUseMax = [numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
 x = np.zeros((totalNumPts, numConcatFeats))
 y = np.zeros(totalNumPts)
