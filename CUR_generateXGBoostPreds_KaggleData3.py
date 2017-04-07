@@ -158,7 +158,7 @@ clf = xgb.XGBRegressor(max_depth=10,
 clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True,
         eval_metric='logloss', early_stopping_rounds=100)
 """
-for fInd in range(len(matFiles)):
+for fInd in range(589,len(matFiles)):
     print('Now Processing File ' + str(fInd) + ' of ' + str(len(matFiles)))
 
     curFile = os.path.join(curDir,matFiles[fInd])
