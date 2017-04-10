@@ -1,5 +1,4 @@
-%dirName = 'data/sample_images';
-dirName = 'data/stage1/stage1';
+dirName = 'stage2Data/stage2/stage2';
 
 dcmFolders = dir(dirName);
 numFolders = size(dcmFolders,1);
@@ -20,7 +19,7 @@ for i = 1:numFolders
     
     foldName = curSampleFolder(end-31:end);
     
-    newFileName = strcat('volResizeInfo/resizeTuple_',foldName);
+    newFileName = strcat('volResizeInfoStage2/resizeTuple_',foldName);
     save(newFileName,'resizeTuple');
     
 

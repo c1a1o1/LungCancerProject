@@ -1,11 +1,14 @@
 %dirName = 'data/sample_images';
-dirName = 'data/stage1/stage1';
+%dirName = 'data/stage1/stage1';
+dirName = 'stage2Data/stage2/stage2';
 
 dcmFolders = dir(dirName);
 numFolders = size(dcmFolders,1);
 
 
-for i = 1:numFolders
+for i = 159:numFolders
+    
+    clearvars -except dcmFolders numFolders dirName i
     
     foldname = dcmFolders(i,1).name;
     curSampleFolder = strcat(dirName,'/',foldname);
@@ -25,7 +28,7 @@ for i = 1:numFolders
     
     %resizedDCM = imresize3d(outputDCM,[],[256 256 100],'nearest','fill');
     
-    newFileName = strcat('rawHUdata/rawDCM_',foldName);
+    newFileName = strcat('rawHUdataStage2/rawDCM_',foldName);
     save(newFileName,'dcmArrayHU');
     
 

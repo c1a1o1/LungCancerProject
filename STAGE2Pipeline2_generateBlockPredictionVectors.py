@@ -41,12 +41,11 @@ numGivenFeat=4096
 numConcatFeats = numGivenFeat*3
 
 
-dataFolder = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
-dataFolder2 = '/home/zdestefa/data/blockFilesResizedVGG19to4096Kaggle'
+dataFolder = '/home/zdestefa/data/blockFilesResizedVGG19to4096Stage2'
 
 
-curDir = '/home/zdestefa/data/rawHUdata'
-curDir2 = '/home/zdestefa/data/volResizeInfo'
+curDir = '/home/zdestefa/data/rawHUdataStage2'
+curDir2 = '/home/zdestefa/data/volResizeInfoStage2'
 
 print('Loading Binary Array')
 
