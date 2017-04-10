@@ -1,5 +1,5 @@
 %dirName = 'data/sample_images';
-dirName = 'rawHUdata';
+dirName = 'rawHUdataStage2';
 
 dcmFolders = dir(dirName);
 numFiles = size(dcmFolders,1);
