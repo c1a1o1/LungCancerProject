@@ -156,6 +156,7 @@ def getFeatDataFromFile2(currentFile):
             for kk in range(initFeatData.shape[2]):
                 vectData = noduleModelPreLayer.predict(initFeatData[ii,jj,kk,:])
                 outputTensor[ii,jj,kk,:] = vectData
+    finalOutput = np.mean(outputTensor,axis=2)
 
     # layerFeatData = noduleModelPreLayer.predict(initFeatData)
     # outputData = np.zeros((numRowsTotal,256))
@@ -165,7 +166,7 @@ def getFeatDataFromFile2(currentFile):
     #     for ii in range(numRowsTotal):
     #         curRind=ii%layerFeatData.shape[0]
     #         outputData[ii,:] = layerFeatData[curRind,:]
-    return outputTensor
+    return finalOutput
 
 
 
@@ -183,7 +184,7 @@ for pInd in range(len(trainTestIDs)):
     fileName = 'blockInfoOutput4DTensor_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,:,:,:,:] = getFeatDataFromFile2(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -210,14 +211,14 @@ trn_yy = np_utils.to_categorical(trn_yy2, 2)
 val_yy = np_utils.to_categorical(val_yy2, 2)
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(validationIDs), 1,numRowsTotal,numLayerFeat))
+x2 = np.zeros((len(validationIDs), 1,16,16,16,256))
 ind=0
 for pInd in range(len(validationIDs)):
     patID = validationIDs[pInd]
     fileName = 'blockInfoOutput4DTensor_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind, 0, :, :] = getFeatDataFromFile2(currentFile)
+        x2[ind, 0, :, :, :, :] = getFeatDataFromFile2(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
 
@@ -231,8 +232,8 @@ model.add(Dropout(0.25))
 model.add(Flatten())
 """
 input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
-convLayer1 = Convolution2D(32,10,1,border_mode='valid',activation='relu')(input_img2)
-maxLayer2 = MaxPooling2D(pool_size=(10,1))(convLayer1)
+convLayer1 = Convolution3D(32,4,4,1,border_mode='valid',activation='relu')(input_img2)
+maxLayer2 = MaxPooling3D(pool_size=(4,4,1))(convLayer1)
 dropout1 = Dropout(0.25)(maxLayer2)
 flatten1 = Flatten()(dropout1)
 fc1 = Dense(2048,init='normal',activation='relu')(flatten1)
