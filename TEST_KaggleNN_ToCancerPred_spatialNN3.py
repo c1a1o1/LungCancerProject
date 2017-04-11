@@ -15,6 +15,7 @@ from keras.layers import Convolution2D, MaxPooling2D
 from keras.layers import Convolution3D, MaxPooling3D
 from keras.utils import np_utils
 from keras import backend as K
+from keras.models import load_model
 
 import scipy.io as sio
 from scipy.misc import imread, imresize, imsave
@@ -41,7 +42,7 @@ from convnetskeras.customlayers import convolution2Dgroup, crosschannelnormaliza
     splittensor, Softmax4D
 from convnetskeras.imagenet_tool import synset_to_id, id_to_synset,synset_to_dfs_ids
 import csv
-from keras.models import load_model
+
 
 numGivenFeat=4096
 numFeats = numGivenFeat*6
@@ -89,8 +90,8 @@ for ind in range(numDataPts):
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-numPtsUse = min(numZeros,numOne)
-#numPtsUse = 300
+#numPtsUse = min(numZeros,numOne)
+numPtsUse = 100
 
 numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
