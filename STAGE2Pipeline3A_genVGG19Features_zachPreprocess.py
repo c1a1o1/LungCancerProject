@@ -16,72 +16,12 @@ from keras.layers import Convolution2D, MaxPooling2D
 from keras.layers import Convolution3D, MaxPooling3D
 from keras.utils import np_utils
 from keras import backend as K
+from keras.applications.vgg19 import VGG19
+from scipy.ndimage.interpolation import zoom
 
 from keras.applications.resnet50 import ResNet50
 import scipy.io as sio
 from scipy.misc import imresize
-"""
-def get_extractor():
-    model = mx.model.FeedForward.load('model/resnet-50', 0, ctx=mx.cpu(), numpy_batch_size=1)
-    fea_symbol = model.symbol.get_internals()["flatten0_output"]
-    feature_extractor = mx.model.FeedForward(ctx=mx.cpu(), symbol=fea_symbol, numpy_batch_size=64,
-                                             arg_params=model.arg_params, aux_params=model.aux_params,
-                                             allow_extra_params=True)
-
-    return feature_extractor
-
-
-def get_3d_data(path):
-    slices = [dicom.read_file(path + '/' + s) for s in os.listdir(path)]
-    slices.sort(key=lambda x: int(x.InstanceNumber))
-    return np.stack([s.pixel_array for s in slices])
-
-
-def get_data_id(path):
-    sample_image = get_3d_data(path)
-    sample_image[sample_image == -2000] = 0
-    # f, plots = plt.subplots(4, 5, sharex='col', sharey='row', figsize=(10, 8))
-
-    batch = []
-    cnt = 0
-    dx = 40
-    ds = 512
-    for i in range(0, sample_image.shape[0] - 3, 3):
-        tmp = []
-        for j in range(3):
-            img = sample_image[i + j]
-            img = 255.0 / np.amax(img) * img
-            img = cv2.equalizeHist(img.astype(np.uint8))
-            img = img[dx: ds - dx, dx: ds - dx]
-            img = cv2.resize(img, (224, 224))
-            tmp.append(img)
-
-        tmp = np.array(tmp)
-        batch.append(np.array(tmp))
-
-        # if cnt < 20:
-        #     plots[cnt // 5, cnt % 5].axis('off')
-        #     plots[cnt // 5, cnt % 5].imshow(np.swapaxes(tmp, 0, 2))
-        # cnt += 1
-
-    # plt.show()
-    batch = np.array(batch)
-    return batch
-
-
-def calc_features():
-    net = get_extractor()
-    for folder in glob.glob('stage1/*'):
-        batch = get_data_id(folder)
-        feats = net.predict(batch)
-        print(feats.shape)
-        np.save(folder, feats)
-"""
-
-# if K.image_dim_ordering() == 'th':
-#     input_shape = (1, img_rows, img_cols,img_sli)
-# else:
-#     input_shape = (img_rows, img_cols,img_sli, 1)
 
 trainTestIDs = []
 trainTestLabels = []
@@ -98,27 +38,21 @@ with open('stage1_sample_submission.csv') as csvfile:
         validationIDs.append(row['id'])
 
 def getVolData(patID):
-    patFile = "/home/zdestefa/data/segFilesResizedAll/resizedSegDCM_" + patID + ".mat"
+    patFile = "/home/zdestefa/data/segFilesStage2/segDCM_" + patID + ".mat"
     curMATcontent = sio.loadmat(patFile)
-    volData = curMATcontent["resizedDCM"]
-    return volData.astype('float32')
+    volData = curMATcontent["outputDCM"]
+    zoomX = 256.0/volData.shape[0]
+    zoomY = 256.0/volData.shape[1]
+    zoomZ = 100.0/volData.shape[2]
+    volDataOutput = zoom(volData,(zoomX,zoomY,zoomZ))
+    return volDataOutput.astype('float32')
 
 origNet = VGG19(include_top=True, weights='imagenet', input_tensor=None, input_shape=None)
-#net = Model(input=origNet.input,output=origNet.get_layer('flatten_1').output)
-#net2 = Model(input=origNet.input,output=origNet.get_layer('activation_48').output)
 net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
 
-#Here is output showing that the Activation_49 layer has 2048x7x7 nodes and the 2D one
-#   We will want to use
-
-#>>> myLayer = origNet.get_layer('activation_49')
-#>>> myLayer.output_shape
-#(None, 2048, 7, 7)
-
-
 def genResNetFeatFile(id):
-    fileName2 = 'data/segFilesResizedResNetAct48/resnetFeats_' + id + '.npy'
-    fileName3 = 'data/segFilesResizedResNetAct49/resnetFeats_' + id + '.npy'
+    #fileName2 = 'data/segFilesResizedResNetAct48/resnetFeats_' + id + '.npy'
+    fileName3 = 'data/segFilesStage2VGG/vgg19Feats_' + id + '.npy'
     curData = getVolData(id)
     curDataReshape = np.reshape(curData,(1,256,256,100))
     batch = []
@@ -134,70 +68,20 @@ def genResNetFeatFile(id):
         tmp = np.array(tmp)
         batch.append(np.array(tmp))
     batch = np.array(batch)
-    feats2 = net2.predict(batch)
     feats3 = net3.predict(batch)
-
-    np.save(fileName2, feats2)
     np.save(fileName3, feats3)
 
 def calc_featuresA():
-    total = len(trainTestIDs)+len(validationIDs)
-    curInd = 0
-    for id in trainTestIDs:
-        curInd = curInd + 1
-        print('Obtaining features for file_' + str(curInd) + '_of_' + str(total))
-        genResNetFeatFile(id)
-    for id in validationIDs:
-        print('Obtaining features for file_' + str(curInd) + '_of_' + str(total))
-        curInd = curInd + 1
-        genResNetFeatFile(id)
+    fileNames = os.listdir('/home/zdestefa/data/segFilesStage2')
+    displayInd = 1
+    for fileN in fileNames:
+        print("Now Processing File " + str(displayInd) + " of " + str(len(fileNames)))
+        if(fileN.endswith(".mat")):
+            patientIDnum = fileN[7:len(fileN)-4]
+            genResNetFeatFile(patientIDnum)
+        displayInd = displayInd+1
 
-
-
-def train_xgboost():
-    #df = pd.read_csv('data/stage1_labels.csv')
-    #print(df.head())
-
-    #x = np.array([np.mean(np.load('stage1/%s.npy' % str(id)), axis=0) for id in df['id'].tolist()])
-
-    print('Train/Validation Data Shape:')
-    #x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs.tolist()])
-    x = np.array([np.mean(getVolData(id), axis=0) for id in trainTestIDs])
-    print(x.shape)
-    y = trainTestLabels.as_matrix()
-
-    # trn_x, val_x, trn_y, val_y = cross_validation.train_test_split(x, y, random_state=42, stratify=y,
-    #                                                                test_size=0.20)
-    #
-    # clf = xgb.XGBRegressor(max_depth=10,
-    #                        n_estimators=1500,
-    #                        min_child_weight=9,
-    #                        learning_rate=0.05,
-    #                        nthread=8,
-    #                        subsample=0.80,
-    #                        colsample_bytree=0.80,
-    #                        seed=4242)
-    #
-    # clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True, eval_metric='logloss', early_stopping_rounds=50)
-    # return clf
-
-
-def make_submit():
-    #clf = train_xgboost()
-    train_xgboost()
-    #df = pd.read_csv('data/stage1_sample_submission.csv')
-
-    #x = np.array([np.mean(getVolData(id), axis=0) for id in validationIDs.tolist()])
-    x = np.array([np.mean(getVolData(id), axis=0) for id in validationIDs])
-    print('Test Data Shape:')
-    print(x.shape)
-    #pred = clf.predict(x)
-
-    # df['cancer'] = pred
-    # df.to_csv('subm1.csv', index=False)
-    # print(df.head())
 
 
 if __name__ == '__main__':
     calc_featuresA()
-    #make_submit()
