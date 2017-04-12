@@ -90,8 +90,8 @@ for ind in range(numDataPts):
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-numPtsUse = min(numZeros,numOne)
-#numPtsUse = 300
+#numPtsUse = min(numZeros,numOne)
+numPtsUse = 100
 
 numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
