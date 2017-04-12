@@ -53,23 +53,24 @@ net3 = Model(input=origNet.input,output=origNet.get_layer('fc2').output)
 def genResNetFeatFile(id):
     #fileName2 = 'data/segFilesResizedResNetAct48/resnetFeats_' + id + '.npy'
     fileName3 = 'data/segFilesStage2VGG/vgg19Feats_' + id + '.npy'
-    curData = getVolData(id)
-    curDataReshape = np.reshape(curData,(1,256,256,100))
-    batch = []
-    cnt = 0
-    dx = 40
-    ds = 512
-    for i in range(0, curData.shape[2] - 3, 3):
-        tmp = []
-        for j in range(3):
-            img2 = curData[i + j]
-            img = imresize(img2,(224,224))
-            tmp.append(img)
-        tmp = np.array(tmp)
-        batch.append(np.array(tmp))
-    batch = np.array(batch)
-    feats3 = net3.predict(batch)
-    np.save(fileName3, feats3)
+    if not os.path.isfile(fileName3):
+        curData = getVolData(id)
+        curDataReshape = np.reshape(curData,(1,256,256,100))
+        batch = []
+        cnt = 0
+        dx = 40
+        ds = 512
+        for i in range(0, curData.shape[2] - 3, 3):
+            tmp = []
+            for j in range(3):
+                img2 = curData[i + j]
+                img = imresize(img2,(224,224))
+                tmp.append(img)
+            tmp = np.array(tmp)
+            batch.append(np.array(tmp))
+        batch = np.array(batch)
+        feats3 = net3.predict(batch)
+        np.save(fileName3, feats3)
 
 def calc_featuresA():
     fileNames = os.listdir('/home/zdestefa/data/segFilesStage2')

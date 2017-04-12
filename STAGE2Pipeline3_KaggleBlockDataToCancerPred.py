@@ -51,16 +51,25 @@ numConcatFeats = numGivenFeat*3
 trainTestIDs = []
 validationIDs = []
 trainTestLabels = []
+validationLabels = []
+stage2IDs = []
 with open('stage1_labels.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         trainTestIDs.append(row['id'])
         trainTestLabels.append(row['cancer'])
 
-with open('stage1_sample_submission.csv') as csvfile:
+with open('stage1_solution.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         validationIDs.append(row['id'])
+        validationLabels.append(row['cancer'])
+
+with open('stage2_sample_submission.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        stage2IDs.append(row['id'])
+
 
 def getFeatureData(fileNm,dataFold):
     featData = np.load(os.path.join(dataFold,fileNm))
@@ -129,22 +138,6 @@ noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=30,
                   verbose=1, validation_data=(val_x, val_y))
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
-#noduleModelPreLayer.save('noduleModelPreLayer.h5')
-
-
-#noduleModelPreLayer = load_model('noduleModelPreLayer.h5')
-#noduleModelPreLayer.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-"""
-def getFeatDataFromFile(currentFile):
-    initFeatData = np.load(currentFile)
-    layerFeatData = noduleModelPreLayer.predict(initFeatData)
-    avgPool = np.mean(layerFeatData,axis=0)
-    maxPool = np.max(layerFeatData,axis=0)
-    outVec = np.zeros((1,numLayerFeat*2))
-    outVec[0,range(numLayerFeat)] = avgPool
-    outVec[0,range(numLayerFeat,numLayerFeat*2)] = maxPool
-    return outVec
-"""
 numRowsTotal = 150
 def getFeatDataFromFile2(currentFile):
     initFeatData = np.load(currentFile)
@@ -163,8 +156,8 @@ def getFeatDataFromFile2(currentFile):
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((len(trainTestIDs), 1,numRowsTotal,numLayerFeat))
-y1 = np.zeros(len(trainTestIDs))
+x1 = np.zeros((len(trainTestIDs)+len(validationIDs), 1,numRowsTotal,numLayerFeat))
+y1 = np.zeros(len(trainTestIDs)+len(validationIDs))
 
 numZero = 0
 numOne = 0
@@ -182,7 +175,22 @@ for pInd in range(len(trainTestIDs)):
         else:
             numOne = numOne+1
         ind=ind+1
-        print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(trainTestIDs)))
+        print("Obtained Kaggle Data for Train/test pt " + str(ind) + " of " + str(len(trainTestIDs)))
+for pInd in range(len(validationIDs)):
+    patID = validationIDs[pInd]
+    fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
+    currentFile = os.path.join(dataFolder, fileName)
+    if(os.path.isfile(currentFile)):
+        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
+        curL = int(validationLabels[pInd])
+        y1[ind] = curL
+        if(curL<1):
+            numZero = numZero + 1
+        else:
+            numOne = numOne+1
+        ind=ind+1
+        print("Obtained Kaggle Data for validation pt " + str(ind) + " of " + str(len(validationIDs)))
+
 
 xx=x1
 yy=y1
@@ -201,26 +209,18 @@ trn_yy = np_utils.to_categorical(trn_yy2, 2)
 val_yy = np_utils.to_categorical(val_yy2, 2)
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(validationIDs), 1,numRowsTotal,numLayerFeat))
+x2 = np.zeros((len(stage2IDs), 1,numRowsTotal,numLayerFeat))
 ind=0
-for pInd in range(len(validationIDs)):
-    patID = validationIDs[pInd]
+for pInd in range(len(stage2IDs)):
+    patID = stage2IDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
         x2[ind, 0, :, :] = getFeatDataFromFile2(currentFile)
         ind=ind+1
-        print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
+        print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(len(validationIDs)))
 
-"""
-model.add(Conv2D(32, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=input_shape))
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-model.add(Flatten())
-"""
+
 input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
 convLayer1 = Convolution2D(32,10,1,border_mode='valid',activation='relu')(input_img2)
 maxLayer2 = MaxPooling2D(pool_size=(10,1))(convLayer1)
@@ -246,30 +246,13 @@ def writeKagglePredictionFile(prefixString,pred):
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()
-        for ind in range(len(validationIDs)):
+        for ind in range(len(stage2IDs)):
             curPred = pred[ind]
             if (curPred < 0):
                 curPred = 0
-            writer.writerow({'id': validationIDs[ind], 'cancer': str(curPred)})
+            writer.writerow({'id': stage2IDs[ind], 'cancer': str(curPred)})
 
 pred = kaggleModel.predict(x2)
-prefixString = 'submissions/KaggleNN_NN_Prediction_'
+prefixString = 'submissions/STAGE2_KaggleNN_NN_Prediction_'
 predOut = pred[:,1]
 writeKagglePredictionFile(prefixString,predOut)
-"""
-clf = xgb.XGBRegressor(max_depth=10,
-                           n_estimators=1500,
-                           min_child_weight=9,
-                           learning_rate=0.05,
-                           nthread=8,
-                           subsample=0.80,
-                           colsample_bytree=0.80,
-                           seed=4242)
-
-clf.fit(trn_xx, trn_yy2, eval_set=[(val_xx, val_yy2)], verbose=True,
-        eval_metric='logloss', early_stopping_rounds=100)
-
-pred2 = clf.predict(x2)
-prefixString2 = 'submissions/KaggleNN_XGBoost_Prediction_'
-writeKagglePredictionFile(prefixString2,pred2)
-"""
