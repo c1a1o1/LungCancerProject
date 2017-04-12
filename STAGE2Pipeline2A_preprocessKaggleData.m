@@ -15,7 +15,7 @@ for i = 1:numFiles
     fprintf(strcat('Now processing file ',num2str(i),' of ',num2str(numFiles),'\n'));
     
     newFileName = curFile(end-35:end);
-    newFileName = strcat('segFiles/segDCM_',newFileName);
+    newFileName = strcat('segFilesStage2/segDCM_',newFileName);
     
     if(exist(newFileName,'file')>0)
        fprintf('File was already processed. Moving onto next one\n'); 
