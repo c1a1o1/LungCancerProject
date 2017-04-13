@@ -71,7 +71,7 @@ def getFeatureData(fileNm,dataFold):
     outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData, axis=0)  # this causes potential overfit. should remove
     return outVec
 
-dataFolder = '/home/zdestefa/data/KaggleDataBlockInfo2'
+dataFolder = '/home/zdestefa/data/KaggleDataBlockInfo3'
 dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
 resNetFiles = os.listdir(dataFolderA)
 numDataPts = len(resNetFiles)
@@ -90,8 +90,8 @@ for ind in range(numDataPts):
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-numPtsUse = min(numZeros,numOne)
-#numPtsUse = 300
+#numPtsUse = min(numZeros,numOne)
+numPtsUse = 2000
 
 numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
@@ -130,22 +130,7 @@ noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=30,
                   verbose=1, validation_data=(val_x, val_y))
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
-#noduleModelPreLayer.save('noduleModelPreLayer.h5')
 
-
-#noduleModelPreLayer = load_model('noduleModelPreLayer.h5')
-#noduleModelPreLayer.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-"""
-def getFeatDataFromFile(currentFile):
-    initFeatData = np.load(currentFile)
-    layerFeatData = noduleModelPreLayer.predict(initFeatData)
-    avgPool = np.mean(layerFeatData,axis=0)
-    maxPool = np.max(layerFeatData,axis=0)
-    outVec = np.zeros((1,numLayerFeat*2))
-    outVec[0,range(numLayerFeat)] = avgPool
-    outVec[0,range(numLayerFeat,numLayerFeat*2)] = maxPool
-    return outVec
-"""
 numRowsTotal = 150
 finalShape = [16,16,16,256]
 def getFeatDataFromFile2(currentFile):
@@ -154,18 +139,13 @@ def getFeatDataFromFile2(currentFile):
     for ii in range(initFeatData.shape[0]):
         for jj in range(initFeatData.shape[1]):
             for kk in range(initFeatData.shape[2]):
-                vectData = noduleModelPreLayer.predict(initFeatData[ii,jj,kk,:])
+                inputData = initFeatData[ii,jj,kk,:]
+                inputVector = np.reshape(inputData,(1,len(inputData)))
+                vectData = noduleModelPreLayer.predict(inputVector)
                 outputTensor[ii,jj,kk,:] = vectData
     finalOutput = np.mean(outputTensor,axis=2)
 
-    # layerFeatData = noduleModelPreLayer.predict(initFeatData)
-    # outputData = np.zeros((numRowsTotal,256))
-    # if(layerFeatData.shape[0] >= numRowsTotal):
-    #     outputData = layerFeatData[0:numRowsTotal,:]
-    # else:
-    #     for ii in range(numRowsTotal):
-    #         curRind=ii%layerFeatData.shape[0]
-    #         outputData[ii,:] = layerFeatData[curRind,:]
+
     return finalOutput
 
 
@@ -173,7 +153,7 @@ def getFeatDataFromFile2(currentFile):
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((len(trainTestIDs), 1,16,16,16,256))
+x1 = np.zeros((len(trainTestIDs), 1,16,16,256))
 y1 = np.zeros(len(trainTestIDs))
 
 numZero = 0
@@ -184,7 +164,7 @@ for pInd in range(len(trainTestIDs)):
     fileName = 'blockInfoOutput4DTensor_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,:,:,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,:,:,:] = getFeatDataFromFile2(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -211,27 +191,19 @@ trn_yy = np_utils.to_categorical(trn_yy2, 2)
 val_yy = np_utils.to_categorical(val_yy2, 2)
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(validationIDs), 1,16,16,16,256))
+x2 = np.zeros((len(validationIDs), 1,16,16,256))
 ind=0
 for pInd in range(len(validationIDs)):
     patID = validationIDs[pInd]
     fileName = 'blockInfoOutput4DTensor_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind, 0, :, :, :, :] = getFeatDataFromFile2(currentFile)
+        x2[ind, 0, :, :, :] = getFeatDataFromFile2(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for pt " + str(ind) + " of " + str(len(validationIDs)))
 
-"""
-model.add(Conv2D(32, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=input_shape))
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-model.add(Flatten())
-"""
-input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
+
+input_img2 = Input(shape=(1,16,16,256))
 convLayer1 = Convolution3D(32,4,4,1,border_mode='valid',activation='relu')(input_img2)
 maxLayer2 = MaxPooling3D(pool_size=(4,4,1))(convLayer1)
 dropout1 = Dropout(0.25)(maxLayer2)
