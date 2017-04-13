@@ -91,7 +91,7 @@ for ind in range(numDataPts):
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
 #numPtsUse = min(numZeros,numOne)
-numPtsUse = 2000
+numPtsUse = 200
 
 numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
@@ -132,21 +132,27 @@ noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
 
 numRowsTotal = 150
-finalShape = [16,16,16,256]
+finalShape = [16,16,256]
 def getFeatDataFromFile2(currentFile):
     initFeatData = np.load(currentFile)
     outputTensor = np.zeros(finalShape)
     for ii in range(initFeatData.shape[0]):
         for jj in range(initFeatData.shape[1]):
+            zInd=0
+            outputVector = []
             for kk in range(initFeatData.shape[2]):
                 inputData = initFeatData[ii,jj,kk,:]
-                inputVector = np.reshape(inputData,(1,len(inputData)))
-                vectData = noduleModelPreLayer.predict(inputVector)
-                outputTensor[ii,jj,kk,:] = vectData
-    finalOutput = np.mean(outputTensor,axis=2)
+                if(np.sum(inputData)>0):
+                    inputVector = np.reshape(inputData,(1,len(inputData)))
+                    vectData = noduleModelPreLayer.predict(inputVector)
+                    outputVector.append(np.reshape(vectData,(1,256)))
+                    zInd = zInd+1
+            if(zInd>0):
+                outputTensor[ii, jj, :] = np.max(outputVector,axis=0)
+            #outputTensor[ii, jj, :] = np.mean(outputVector, axis=0)
 
 
-    return finalOutput
+    return outputTensor
 
 
 
