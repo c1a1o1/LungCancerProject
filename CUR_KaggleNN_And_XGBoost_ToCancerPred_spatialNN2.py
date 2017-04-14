@@ -89,8 +89,8 @@ for ind in range(numDataPts):
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-numPtsUse = min(numZeros,numOne)
-#numPtsUse = 300
+#numPtsUse = min(numZeros,numOne)
+numPtsUse = 2000
 
 numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
@@ -222,16 +222,14 @@ model.add(Dropout(0.25))
 model.add(Flatten())
 """
 input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
-act1 = Activation('sigmoid')(input_img2)
-maxLayer0 = MaxPooling2D(pool_size=(numRowsTotal,1))(act1)
-convLayer1 = Convolution2D(32,1,10,border_mode='valid',activation='relu')(maxLayer0)
-maxLayer2 = MaxPooling2D(pool_size=(1,10))(convLayer1)
+#act1 = Activation('sigmoid')(input_img2)
+#maxLayer0 = MaxPooling2D(pool_size=(numRowsTotal,1))(act1)
+convLayer1 = Convolution2D(32,4,4,border_mode='valid',activation='relu')(input_img2)
+maxLayer2 = MaxPooling2D(pool_size=(4,4))(convLayer1)
 dropout1 = Dropout(0.25)(maxLayer2)
 flatten1 = Flatten()(dropout1)
 fc1 = Dense(2048,init='normal',activation='relu')(flatten1)
-fc2 = Dense(1024,init='normal',activation='relu')(fc1)
-fc3 = Dense(256,init='normal',activation='relu')(fc2)
-layer2 = Dense(64, init='normal', activation='sigmoid')(fc3)
+layer2 = Dense(256, init='normal', activation='sigmoid')(fc1)
 outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
