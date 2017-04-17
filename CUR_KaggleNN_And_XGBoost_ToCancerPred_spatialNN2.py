@@ -89,8 +89,8 @@ for ind in range(numDataPts):
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-#numPtsUse = min(numZeros,numOne)
-numPtsUse = 2000
+numPtsUse = min(numZeros,numOne)
+#numPtsUse = 2000
 
 numUseMax = [2*numPtsUse,numPtsUse]
 totalNumPts=np.sum(numUseMax)
@@ -224,7 +224,7 @@ model.add(Flatten())
 input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
 #act1 = Activation('sigmoid')(input_img2)
 #maxLayer0 = MaxPooling2D(pool_size=(numRowsTotal,1))(act1)
-convLayer1 = Convolution2D(32,4,4,border_mode='valid',activation='relu')(input_img2)
+convLayer1 = Convolution2D(32,8,8,border_mode='valid',activation='relu')(input_img2)
 maxLayer2 = MaxPooling2D(pool_size=(4,4))(convLayer1)
 dropout1 = Dropout(0.25)(maxLayer2)
 flatten1 = Flatten()(dropout1)
