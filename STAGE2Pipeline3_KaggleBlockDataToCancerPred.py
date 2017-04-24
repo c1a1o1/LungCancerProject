@@ -70,38 +70,57 @@ with open('stage2_sample_submission.csv') as csvfile:
     for row in reader:
         stage2IDs.append(row['id'])
 
-
-def getFeatureData(fileNm,dataFold):
-    featData = np.load(os.path.join(dataFold,fileNm))
-    outVec = np.zeros((1,numConcatFeats))
+def getFeatureDataA(fullDataPath):
+    featData = np.load(fullDataPath)
+    outVec = np.zeros((1, numConcatFeats))
     outVec[0, 0:numGivenFeat] = np.mean(featData, axis=0)
     outVec[0, numGivenFeat:numGivenFeat * 2] = np.max(featData, axis=0)  # this causes potential overfit. should remove
-    outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData, axis=0)  # this causes potential overfit. should remove
+    outVec[0, numGivenFeat * 2:numGivenFeat * 3] = np.min(featData,                                                   axis=0)  # this causes potential overfit. should remove
     return outVec
 
-dataFolder = '/home/zdestefa/data/KaggleDataBlockInfo2'
-dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096'
-resNetFiles = os.listdir(dataFolderA)
-numDataPts = len(resNetFiles)
+def getFeatureData(fileNm,dataFold):
+    pathA = os.path.join(dataFold,fileNm)
+    return getFeatureDataA(pathA)
 
+dataFolder = '/home/zdestefa/data/KaggleDataBlockInfo2'
+dataFolderA = '/home/zdestefa/data/blockFilesResizedVGG19to4096_DanielrkData'
+dataFolderB = '/home/zdestefa/data/blockFilesResizedVGG19to4096_highCancer'
+resNetFilesAInitial = os.listdir(dataFolderA)
+resNetFilesB = os.listdir(dataFolderB)
+
+resNetFilesA = []
+for file in resNetFilesAInitial:
+    if(file.endswith("label0.npy")):
+        resNetFilesA.append(file)
+
+numDataPts = len(resNetFilesA) + len(resNetFilesB)
+
+resNetFiles = []
+for file1 in resNetFilesA:
+    path1 = os.path.join(dataFolderA,file1)
+    resNetFiles.append(path1)
+for file2 in resNetFilesB:
+    path2 = os.path.join(dataFolderB,file2)
+    resNetFiles.append(path2)
 
 x0 = np.zeros((numDataPts,numConcatFeats))
 y0 = np.zeros(numDataPts)
 
-for ind in range(numDataPts):
-    if(resNetFiles[ind].endswith("label0.npy")):
-        y0[ind] = 1
-    else:
-        y0[ind] = 0
+y0[0:len(resNetFilesA)]=0
+y0[len(resNetFilesA):numDataPts]=1
 
-
+# for ind in range(numDataPts):
+#     if(resNetFilesA[ind].endswith("label0.npy")):
+#         y0[ind] = 1
+#     else:
+#         y0[ind] = 0
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-numPtsUse = min(numZeros,numOne)
+#numPtsUse = min(numZeros,numOne)
 #numPtsUse = 300
-
-numUseMax = [2*numPtsUse,numPtsUse]
+#numUseMax = [2*numPtsUse,numPtsUse]
+numUseMax = [numZeros,numOne]
 totalNumPts=np.sum(numUseMax)
 x = np.zeros((totalNumPts, numConcatFeats))
 y = np.zeros(totalNumPts)
@@ -115,7 +134,7 @@ for ind0 in indsToDrawFrom:
     if(numOut[curOut] < numUseMax[curOut]):
         numOut[curOut] = numOut[curOut] + 1
         y[outInd] = curOut
-        x[outInd,:] = getFeatureData(resNetFiles[ind0],dataFolderA)
+        x[outInd,:] = getFeatureDataA(resNetFiles[ind0])
         outInd = outInd+1
         print("Obtained the Neural Net output for block " + str(outInd) + " of " + str(len(y)))
 
