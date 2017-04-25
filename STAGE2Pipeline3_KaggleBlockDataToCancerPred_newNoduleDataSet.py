@@ -69,6 +69,9 @@ with open('stage2_sample_submission.csv') as csvfile:
     for row in reader:
         stage2IDs.append(row['id'])
 
+
+
+
 def getFeatureDataA(fullDataPath):
     featData = np.load(fullDataPath)
     outVec = np.zeros((1, numConcatFeats))
@@ -116,10 +119,28 @@ y0[len(resNetFilesA):numDataPts]=1
 
 numZeros = np.sum(y0<1)
 numOne = len(y0)-numZeros
-#numPtsUse = min(numZeros,numOne)
-#numPtsUse = 300
-#numUseMax = [2*numPtsUse,numPtsUse]
+
+#CHANGE THIS FOR UNIT TESTS
+
+#UNIT TEST VALUES
+# numStage2Use = 50
+# numTrainUse = 100
+# numValidUse = 50
+# numPtsUse = 300
+# numUseMax = [2*numPtsUse,numPtsUse]
+
+#NORMAL VALUES
+numStage2Use = len(stage2IDs)
+numTrainUse = len(trainTestIDs)
+numValidUse = len(validationIDs)
 numUseMax = [numZeros,numOne]
+
+
+#numPtsUse = min(numZeros,numOne)
+#numUseMax = [2*numPtsUse,numPtsUse]
+
+
+
 totalNumPts=np.sum(numUseMax)
 x = np.zeros((totalNumPts, numConcatFeats))
 y = np.zeros(totalNumPts)
@@ -178,7 +199,7 @@ def getFeatDataFromFile3(currentFile):
     else:
         for ii in range(numRowsTotal):
             curRind=ii%layerFeatData.shape[0]
-            outputData[ii,:] = layerFeatData[curRind,1]
+            outputData[ii] = layerFeatData[curRind,1]
     return outputData
 
 
@@ -186,18 +207,19 @@ print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 numLayerFeat=256
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((len(trainTestIDs)+len(validationIDs), 1,numRowsTotal,numLayerFeat))
-y1 = np.zeros(len(trainTestIDs)+len(validationIDs))
+x1 = np.zeros((numTrainUse+numValidUse, 1,1,numRowsTotal))
+y1 = np.zeros(numTrainUse+numValidUse)
 
 numZero = 0
 numOne = 0
 ind = 0
-for pInd in range(len(trainTestIDs)):
+
+for pInd in range(numTrainUse):
     patID = trainTestIDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,0,:] = getFeatDataFromFile3(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -205,13 +227,13 @@ for pInd in range(len(trainTestIDs)):
         else:
             numOne = numOne+1
         ind=ind+1
-        print("Obtained Kaggle Data for Train/test pt " + str(ind) + " of " + str(len(trainTestIDs)))
-for pInd in range(len(validationIDs)):
+        print("Obtained Kaggle Data for Train/test pt " + str(ind) + " of " + str(numTrainUse))
+for pInd in range(numValidUse):
     patID = validationIDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,0,:] = getFeatDataFromFile3(currentFile)
         curL = int(validationLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -219,7 +241,7 @@ for pInd in range(len(validationIDs)):
         else:
             numOne = numOne+1
         ind=ind+1
-        print("Obtained Kaggle Data for validation pt " + str(ind) + " of " + str(len(validationIDs)))
+        print("Obtained Kaggle Data for validation pt " + str(ind) + " of " + str(numValidUse))
 
 
 xx=x1
@@ -237,51 +259,36 @@ trn_xx, val_xx, trn_yy2, val_yy2 = cross_validation.train_test_split(xx, yy, ran
 
 trn_yy = np_utils.to_categorical(trn_yy2, 2)
 val_yy = np_utils.to_categorical(val_yy2, 2)
-"""
+
+
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(stage2IDs), 1,numRowsTotal,numLayerFeat))
+x2 = np.zeros((numStage2Use, 1,1,numRowsTotal))
 ind=0
-for pInd in range(len(stage2IDs)):
+for pInd in range(numStage2Use):
     patID = stage2IDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind, 0, :, :] = getFeatDataFromFile2(currentFile)
+        x2[ind, 0, 0,:] = getFeatDataFromFile3(currentFile)
         ind=ind+1
-        print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(len(validationIDs)))
+        print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(numStage2Use))
 
-input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
-convLayer1 = Convolution2D(32,8,8,border_mode='valid',activation='relu')(input_img2)
-maxLayer2 = MaxPooling2D(pool_size=(4,4))(convLayer1)
+# input_img2 = Input(shape=(1,1,numRowsTotal))
+# actLayer1 = Activation('sigmoid')(input_img2)
+# maxLayer2 = MaxPooling2D(pool_size=(1,numRowsTotal))(actLayer1)
+# flatten1 = Flatten()(maxLayer2)
+# fc1 = Dense(8,init='normal',activation='relu')(flatten1)
+# layer2 = Dense(4, init='normal', activation='sigmoid')(fc1)
+# outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
+# kaggleModel = Model(input=input_img2, output=outputLayer)
+# kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+# kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
+#                   verbose=1, validation_data=(val_xx, val_yy))
+
+input_img2 = Input(shape=(1,1,numRowsTotal))
+maxLayer2 = MaxPooling2D(pool_size=(1,numRowsTotal))(input_img2)
 flatten1 = Flatten()(maxLayer2)
-dropout1 = Dropout(0.25)(flatten1)
-fc1 = Dense(2048,init='normal',activation='relu')(dropout1)
-layer2 = Dense(256, init='normal', activation='sigmoid')(fc1)
-outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
-kaggleModel = Model(input=input_img2, output=outputLayer)
-kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
-                  verbose=1, validation_data=(val_xx, val_yy))
-"""
-
-print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(stage2IDs), 1,numRowsTotal))
-ind=0
-for pInd in range(len(stage2IDs)):
-    patID = stage2IDs[pInd]
-    fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
-    currentFile = os.path.join(dataFolder, fileName)
-    if(os.path.isfile(currentFile)):
-        x2[ind, 0, :] = getFeatDataFromFile3(currentFile)
-        ind=ind+1
-        print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(len(validationIDs)))
-
-input_img2 = Input(shape=(1,numRowsTotal))
-actLayer1 = Activation('sigmoid')(input_img2)
-maxLayer2 = MaxPooling2D(pool_size=(numRowsTotal,1))(actLayer1)
-flatten1 = Flatten()(maxLayer2)
-fc1 = Dense(16,init='normal',activation='relu')(flatten1)
-layer2 = Dense(4, init='normal', activation='sigmoid')(fc1)
+layer2 = Dense(4, init='normal', activation='sigmoid')(flatten1)
 outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
@@ -308,3 +315,29 @@ pred = kaggleModel.predict(x2)
 prefixString = 'submissions/STAGE2_KaggleNN_NN_Prediction_'
 predOut = pred[:,1]
 writeKagglePredictionFile(prefixString,predOut)
+"""
+print('Kaggle Test Data being obtained')
+x2 = np.zeros((len(stage2IDs), 1,numRowsTotal,numLayerFeat))
+ind=0
+for pInd in range(len(stage2IDs)):
+    patID = stage2IDs[pInd]
+    fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
+    currentFile = os.path.join(dataFolder, fileName)
+    if(os.path.isfile(currentFile)):
+        x2[ind, 0, :, :] = getFeatDataFromFile2(currentFile)
+        ind=ind+1
+        print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(len(validationIDs)))
+
+input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
+convLayer1 = Convolution2D(32,8,8,border_mode='valid',activation='relu')(input_img2)
+maxLayer2 = MaxPooling2D(pool_size=(4,4))(convLayer1)
+flatten1 = Flatten()(maxLayer2)
+dropout1 = Dropout(0.25)(flatten1)
+fc1 = Dense(2048,init='normal',activation='relu')(dropout1)
+layer2 = Dense(256, init='normal', activation='sigmoid')(fc1)
+outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
+kaggleModel = Model(input=input_img2, output=outputLayer)
+kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
+                  verbose=1, validation_data=(val_xx, val_yy))
+"""
