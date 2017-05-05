@@ -42,7 +42,7 @@ from convnetskeras.customlayers import convolution2Dgroup, crosschannelnormaliza
 from convnetskeras.imagenet_tool import synset_to_id, id_to_synset,synset_to_dfs_ids
 import csv
 from keras.models import load_model
-
+from sklearn.metrics import roc_curve
 numGivenFeat=4096
 numFeats = numGivenFeat*6
 numConcatFeats = numGivenFeat*3
@@ -297,6 +297,18 @@ kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
                   verbose=1, validation_data=(val_xx, val_yy))
+
+yHatValidation = kaggleModel.predict(val_xx)
+[falsePos,truePos,posThresholds] = roc_curve(val_yy,yHatValidation[:,1],pos_label=1)
+[falseNeg,trueNeg,negThresholds] = roc_curve(val_yy,yHatValidation[:,0],pos_label=0)
+rocSaveFolder = '/home/zdestefa/rocCurveFiles'
+np.save(os.path.join(rocSaveFolder,'falsePos.npy'),falsePos)
+np.save(os.path.join(rocSaveFolder,'truePos.npy'),truePos)
+np.save(os.path.join(rocSaveFolder,'posThresholds.npy'),posThresholds)
+np.save(os.path.join(rocSaveFolder,'falseNeg.npy'),falseNeg)
+np.save(os.path.join(rocSaveFolder,'trueNeg.npy'),trueNeg)
+np.save(os.path.join(rocSaveFolder,'negThresholds.npy'),negThresholds)
+
 
 def writeKagglePredictionFile(prefixString,pred):
     ts = time.time()
