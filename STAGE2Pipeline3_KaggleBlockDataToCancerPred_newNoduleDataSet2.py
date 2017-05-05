@@ -299,8 +299,8 @@ kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
                   verbose=1, validation_data=(val_xx, val_yy))
 
 yHatValidation = kaggleModel.predict(val_xx)
-[falsePos,truePos,posThresholds] = roc_curve(val_yy,yHatValidation[:,1],pos_label=1)
-[falseNeg,trueNeg,negThresholds] = roc_curve(val_yy,yHatValidation[:,0],pos_label=0)
+[falsePos,truePos,posThresholds] = roc_curve(val_yy2,yHatValidation[:,1],pos_label=1)
+[falseNeg,trueNeg,negThresholds] = roc_curve(val_yy2,yHatValidation[:,0],pos_label=0)
 rocSaveFolder = '/home/zdestefa/rocCurveFiles'
 np.save(os.path.join(rocSaveFolder,'falsePos.npy'),falsePos)
 np.save(os.path.join(rocSaveFolder,'truePos.npy'),truePos)
