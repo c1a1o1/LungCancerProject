@@ -5,6 +5,9 @@ import datetime
 
 from sklearn import cross_validation
 import xgboost as xgb
+import os
+from sklearn.metrics import roc_curve
+from sklearn.metrics import accuracy_score
 
 trainTestIDs = []
 trainTestLabels = []
@@ -77,6 +80,30 @@ def train_xgboost():
 
     clf.fit(trn_x, trn_y, eval_set=[(val_x, val_y)], verbose=True,
             eval_metric='logloss', early_stopping_rounds=100)
+
+    yHatValidation = clf.predict(val_x)
+    [falsePos, truePos, posThresholds] = roc_curve(val_y, yHatValidation, pos_label=1)
+    [falseNeg, trueNeg, negThresholds] = roc_curve(val_y, 1-yHatValidation, pos_label=0)
+    posThreshAcc = np.zeros((len(posThresholds)))
+    ind=0
+    negThreshAcc = np.zeros((len(negThresholds)))
+    for thresh in posThresholds:
+        posThreshAcc[ind] = accuracy_score(val_y,(yHatValidation>thresh))
+        ind = ind + 1
+    ind=0
+    for thresh in negThresholds:
+        negThreshAcc[ind] = accuracy_score(val_y,((1-yHatValidation)>thresh))
+        ind = ind + 1
+    rocSaveFolder = '/home/zdestefa/rocCurveFiles'
+    np.save(os.path.join(rocSaveFolder, 'falsePos.npy'), falsePos)
+    np.save(os.path.join(rocSaveFolder, 'truePos.npy'), truePos)
+    np.save(os.path.join(rocSaveFolder, 'posThresholds.npy'), posThresholds)
+    np.save(os.path.join(rocSaveFolder, 'falseNeg.npy'), falseNeg)
+    np.save(os.path.join(rocSaveFolder, 'trueNeg.npy'), trueNeg)
+    np.save(os.path.join(rocSaveFolder, 'negThresholds.npy'), negThresholds)
+    np.save(os.path.join(rocSaveFolder, 'posThreshAcc.npy'), posThreshAcc)
+    np.save(os.path.join(rocSaveFolder, 'negThreshAcc.npy'), negThreshAcc)
+
     return clf
 
 
