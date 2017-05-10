@@ -178,37 +178,21 @@ noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=15,
                   verbose=1, validation_data=(val_x, val_y))
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
-numRowsTotal = 150
-def getFeatDataFromFile2(currentFile):
-    initFeatData = np.load(currentFile)
-    layerFeatData = noduleModelPreLayer.predict(initFeatData)
-    outputData = np.zeros((numRowsTotal,numLayerFeat))
-    if(layerFeatData.shape[0] >= numRowsTotal):
-        outputData = layerFeatData[0:numRowsTotal,:]
-    else:
-        for ii in range(numRowsTotal):
-            curRind=ii%layerFeatData.shape[0]
-            outputData[ii,:] = layerFeatData[curRind,:]
-    return outputData
-
-def getFeatDataFromFile3(currentFile):
+numTopProbs = 5
+def getTopProbsFromFile(currentFile):
     initFeatData = np.load(currentFile)
     layerFeatData = noduleModel.predict(initFeatData)
-    outputData = np.zeros((numRowsTotal))
-    if(layerFeatData.shape[0] >= numRowsTotal):
-        outputData = layerFeatData[0:numRowsTotal,1]
-    else:
-        for ii in range(numRowsTotal):
-            curRind=ii%layerFeatData.shape[0]
-            outputData[ii] = layerFeatData[curRind,1]
-    return outputData
+    cancerProbs = layerFeatData[:,1]
+    topCancerProbs = np.sort(cancerProbs)[::-1]
+    topProbsUse = topCancerProbs[0:numTopProbs]
+    return 1-np.product(1 - np.array(topProbsUse))
 
 
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((numTrainUse+numValidUse, 1,numRowsTotal,numLayerFeat))
+x1 = np.zeros((numTrainUse+numValidUse, 1,1))
 y1 = np.zeros(numTrainUse+numValidUse)
 
 numZero = 0
@@ -220,7 +204,7 @@ for pInd in range(numTrainUse):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,0] = getTopProbsFromFile(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -234,7 +218,7 @@ for pInd in range(numValidUse):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,:,:] = getFeatDataFromFile2(currentFile)
+        x1[ind,0,0] = getTopProbsFromFile(currentFile)
         curL = int(validationLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -263,36 +247,20 @@ val_yy = np_utils.to_categorical(val_yy2, 2)
 
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((numStage2Use, 1,numRowsTotal,numLayerFeat))
+x2 = np.zeros((numStage2Use, 1,1))
 ind=0
 for pInd in range(numStage2Use):
     patID = stage2IDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind, 0, :,:] = getFeatDataFromFile2(currentFile)
+        x2[ind, 0, 0] = getTopProbsFromFile(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(numStage2Use))
 
-# input_img2 = Input(shape=(1,1,numRowsTotal))
-# actLayer1 = Activation('sigmoid')(input_img2)
-# maxLayer2 = MaxPooling2D(pool_size=(1,numRowsTotal))(actLayer1)
-# flatten1 = Flatten()(maxLayer2)
-# fc1 = Dense(8,init='normal',activation='relu')(flatten1)
-# layer2 = Dense(4, init='normal', activation='sigmoid')(fc1)
-# outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
-# kaggleModel = Model(input=input_img2, output=outputLayer)
-# kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-# kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
-#                   verbose=1, validation_data=(val_xx, val_yy))
 
-input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
-convLayer1 = Convolution2D(16,5,4,border_mode='valid',activation='relu')(input_img2)
-maxLayer2 = MaxPooling2D(pool_size=(10,8))(convLayer1)
-flatten1 = Flatten()(maxLayer2)
-reluLayer1 = Dense(256,init='normal',activation='relu')(flatten1)
-layer2 = Dense(16, init='normal', activation='sigmoid')(reluLayer1)
-outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
+input_img2 = Input(shape=(1,1,1))
+outputLayer = Dense(2,init='normal',activation='sigmoid')(input_img2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
