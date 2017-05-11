@@ -192,7 +192,7 @@ print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((numTrainUse+numValidUse, 1,1))
+x1 = np.zeros((numTrainUse+numValidUse))
 y1 = np.zeros(numTrainUse+numValidUse)
 
 numZero = 0
@@ -204,7 +204,7 @@ for pInd in range(numTrainUse):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,0] = getTopProbsFromFile(currentFile)
+        x1[ind] = getTopProbsFromFile(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -218,7 +218,7 @@ for pInd in range(numValidUse):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind,0,0] = getTopProbsFromFile(currentFile)
+        x1[ind] = getTopProbsFromFile(currentFile)
         curL = int(validationLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -247,20 +247,22 @@ val_yy = np_utils.to_categorical(val_yy2, 2)
 
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((numStage2Use, 1,1))
+x2 = np.zeros((numStage2Use))
 ind=0
 for pInd in range(numStage2Use):
     patID = stage2IDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind, 0, 0] = getTopProbsFromFile(currentFile)
+        x2[ind] = getTopProbsFromFile(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(numStage2Use))
 
 
-input_img2 = Input(shape=(1,1,1))
-outputLayer = Dense(2,init='normal',activation='sigmoid')(input_img2)
+input_img2 = Input(shape=(1,))
+layer1 = Dense(16,init='normal',activation='relu')(input_img2)
+layer2 = Dense(4,init='normal',activation='sigmoid')(layer1)
+outputLayer = Dense(2,init='normal',activation='softmax')(layer2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
 kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
 kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
@@ -287,29 +289,3 @@ pred = kaggleModel.predict(x2)
 prefixString = 'submissions/STAGE2_KaggleNN_NN_Prediction_'
 predOut = pred[:,1]
 writeKagglePredictionFile(prefixString,predOut)
-"""
-print('Kaggle Test Data being obtained')
-x2 = np.zeros((len(stage2IDs), 1,numRowsTotal,numLayerFeat))
-ind=0
-for pInd in range(len(stage2IDs)):
-    patID = stage2IDs[pInd]
-    fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
-    currentFile = os.path.join(dataFolder, fileName)
-    if(os.path.isfile(currentFile)):
-        x2[ind, 0, :, :] = getFeatDataFromFile2(currentFile)
-        ind=ind+1
-        print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(len(validationIDs)))
-
-input_img2 = Input(shape=(1,numRowsTotal,numLayerFeat))
-convLayer1 = Convolution2D(32,8,8,border_mode='valid',activation='relu')(input_img2)
-maxLayer2 = MaxPooling2D(pool_size=(4,4))(convLayer1)
-flatten1 = Flatten()(maxLayer2)
-dropout1 = Dropout(0.25)(flatten1)
-fc1 = Dense(2048,init='normal',activation='relu')(dropout1)
-layer2 = Dense(256, init='normal', activation='sigmoid')(fc1)
-outputLayer = Dense(2, init='normal', activation='softmax')(layer2)
-kaggleModel = Model(input=input_img2, output=outputLayer)
-kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
-kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
-                  verbose=1, validation_data=(val_xx, val_yy))
-"""
