@@ -268,6 +268,20 @@ kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['
 kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
                   verbose=1, validation_data=(val_xx, val_yy))
 
+clf = xgb.XGBRegressor(max_depth=20,
+                           n_estimators=1500,
+                           min_child_weight=9,
+                           learning_rate=0.05,
+                           nthread=8,
+                           subsample=0.80,
+                           colsample_bytree=0.80,
+                           seed=4242)
+
+trnXX = np.reshape(trn_xx,(len(trn_xx),1))
+valXX = np.reshape(val_xx,(len(val_xx),1))
+testXX = np.reshape(x2,(len(x2),1))
+clf.fit(trnXX, trn_yy2, eval_set=[(valXX, val_yy2)], verbose=True,
+        eval_metric='logloss', early_stopping_rounds=100)
 
 def writeKagglePredictionFile(prefixString,pred):
     ts = time.time()
@@ -289,3 +303,7 @@ pred = kaggleModel.predict(x2)
 prefixString = 'submissions/STAGE2_KaggleNN_NN_Prediction_'
 predOut = pred[:,1]
 writeKagglePredictionFile(prefixString,predOut)
+
+prefixString2 = 'submissions/STAGE2_KaggleNN_XGBoost_Prediction_'
+prediction2 = clf.predict(testXX)
+writeKagglePredictionFile(prefixString2,prediction2)
