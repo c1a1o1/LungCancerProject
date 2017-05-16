@@ -179,20 +179,25 @@ noduleModel.fit(trn_x, trn_y, batch_size=500, nb_epoch=15,
 noduleModelPreLayer = Model(input=input_imgBlocks,output=layer2)
 
 numTopProbs = 5
+numProbFeats = numTopProbs+1
 def getTopProbsFromFile(currentFile):
     initFeatData = np.load(currentFile)
     layerFeatData = noduleModel.predict(initFeatData)
     cancerProbs = layerFeatData[:,1]
     topCancerProbs = np.sort(cancerProbs)[::-1]
     topProbsUse = topCancerProbs[0:numTopProbs]
-    return 1-np.product(1 - np.array(topProbsUse))
+    feat1 = 1-np.product(1 - np.array(topProbsUse))
+    output = np.zeros((1,numProbFeats))
+    output[0,0] = feat1
+    output[0,1:numProbFeats] =topProbsUse
+    return output
 
 
 print('Train/Validation Data being obtained from Kaggle')
 kaggleFiles = os.listdir(dataFolder)
 
 numFeatsA = numLayerFeat*2
-x1 = np.zeros((numTrainUse+numValidUse))
+x1 = np.zeros((numTrainUse+numValidUse,numProbFeats))
 y1 = np.zeros(numTrainUse+numValidUse)
 
 numZero = 0
@@ -204,7 +209,7 @@ for pInd in range(numTrainUse):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind] = getTopProbsFromFile(currentFile)
+        x1[ind,:] = getTopProbsFromFile(currentFile)
         curL = int(trainTestLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -218,7 +223,7 @@ for pInd in range(numValidUse):
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x1[ind] = getTopProbsFromFile(currentFile)
+        x1[ind,:] = getTopProbsFromFile(currentFile)
         curL = int(validationLabels[pInd])
         y1[ind] = curL
         if(curL<1):
@@ -247,20 +252,20 @@ val_yy = np_utils.to_categorical(val_yy2, 2)
 
 
 print('Kaggle Test Data being obtained')
-x2 = np.zeros((numStage2Use))
+x2 = np.zeros((numStage2Use,numProbFeats))
 ind=0
 for pInd in range(numStage2Use):
     patID = stage2IDs[pInd]
     fileName = 'blockInfoOutputMatrix_'+patID+'.npy'
     currentFile = os.path.join(dataFolder, fileName)
     if(os.path.isfile(currentFile)):
-        x2[ind] = getTopProbsFromFile(currentFile)
+        x2[ind,:] = getTopProbsFromFile(currentFile)
         ind=ind+1
         print("Obtained Kaggle Data for stage2 pt " + str(ind) + " of " + str(numStage2Use))
 
 
-input_img2 = Input(shape=(1,))
-layer1 = Dense(16,init='normal',activation='relu')(input_img2)
+input_img2 = Input(shape=(numProbFeats,))
+layer1 = Dense(32,init='normal',activation='relu')(input_img2)
 layer2 = Dense(4,init='normal',activation='sigmoid')(layer1)
 outputLayer = Dense(2,init='normal',activation='softmax')(layer2)
 kaggleModel = Model(input=input_img2, output=outputLayer)
@@ -268,6 +273,17 @@ kaggleModel.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['
 kaggleModel.fit(trn_xx, trn_yy, batch_size=500, nb_epoch=50,
                   verbose=1, validation_data=(val_xx, val_yy))
 
+clf = xgb.XGBRegressor(max_depth=20,
+                           n_estimators=1500,
+                           min_child_weight=9,
+                           learning_rate=0.05,
+                           nthread=8,
+                           subsample=0.80,
+                           colsample_bytree=0.80,
+                           seed=4242)
+
+clf.fit(trn_xx, trn_yy2, eval_set=[(val_xx, val_yy2)], verbose=True,
+        eval_metric='logloss', early_stopping_rounds=100)
 
 def writeKagglePredictionFile(prefixString,pred):
     ts = time.time()
@@ -290,3 +306,6 @@ prefixString = 'submissions/STAGE2_KaggleNN_NN_Prediction_'
 predOut = pred[:,1]
 writeKagglePredictionFile(prefixString,predOut)
 
+prefixString2 = 'submissions/STAGE2_KaggleNN_XGBoost_Prediction_'
+prediction2 = clf.predict(x2)
+writeKagglePredictionFile(prefixString2,prediction2)
